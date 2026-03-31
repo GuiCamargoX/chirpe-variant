@@ -1,0 +1,64 @@
+# CHiRPE BERT Configuration
+
+model:
+  name: "bert-base-uncased"
+  type: "bert"
+  max_length: 512
+  num_labels: 2
+
+training:
+  learning_rate: 2.0e-5
+  batch_size: 8
+  num_epochs: 3
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  gradient_accumulation_steps: 1
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  load_best_model_at_end: true
+  metric_for_best_model: "f1"
+  greater_is_better: true
+  logging_steps: 50
+  seed: 42
+
+data:
+  train_file: "train.json"
+  val_file: "val.json"
+  test_file: "test.json"
+  text_column: "summary"
+  label_column: "label"
+  stratify_by: "label"
+  train_split: 0.64
+  val_split: 0.16
+  test_split: 0.20
+
+preprocessing:
+  use_segmentation: true
+  use_summarization: true
+  segmentation_threshold: 0.80
+  symptom_domains:
+    - "P1_Unusual_Thoughts"
+    - "P2_Suspiciousness"
+    - "P3_Unusual_Somatic"
+    - "P4_Disoriented"
+    - "P5_Focused_Thoughts"
+    - "P6_Experiences"
+    - "P7_Perceiving"
+    - "P8_Confusion"
+    - "P9_Daydreaming"
+    - "P10_Time_Experience"
+    - "P11_Depersonalisation"
+    - "P12_Derealisation"
+    - "P13_Superstitious"
+    - "P14_Control"
+    - "P15_Reading_Minds"
+
+explanation:
+  shap_algorithm: "transformers"
+  max_samples_for_background: 100
+  output_formats:
+    - "word_level_plot"
+    - "token_heatmap"
+    - "symptom_level_plot"
+    - "sentence_summary"
+    - "narrative_summary"

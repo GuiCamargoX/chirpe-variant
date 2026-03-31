@@ -1,0 +1,82 @@
+# CHiRPE Ultra-Quick Training Configuration
+# Optimized for fast training and testing
+
+model:
+  name: "distilbert-base-uncased"  # Smaller than BERT, faster training
+  type: "distilbert"
+  max_length: 128                  # Shorter sequences for speed
+  num_labels: 2
+
+training:
+  learning_rate: 5.0e-5           # Higher LR for faster convergence
+  batch_size: 4                   # Small batches for CPU/GPU efficiency
+  num_epochs: 1                   # Just 1 epoch for ultra-quick
+  weight_decay: 0.01
+  warmup_ratio: 0.0               # No warmup for single epoch
+  gradient_accumulation_steps: 1
+  evaluation_strategy: "no"       # Skip eval during training
+  save_strategy: "no"             # Don't save checkpoints
+  load_best_model_at_end: false
+  logging_steps: 10
+  seed: 42
+
+data:
+  train_file: "train.json"
+  val_file: "val.json"
+  test_file: "test.json"
+  text_column: "summary"
+  label_column: "label"
+  stratify_by: "label"
+  train_split: 0.64
+  val_split: 0.16
+  test_split: 0.20
+  # For ultra-quick: limit samples
+  max_train_samples: 20
+  max_val_samples: 5
+  max_test_samples: 5
+
+preprocessing:
+  use_segmentation: true
+  use_summarization: true
+  segmentation_threshold: 0.80
+  # Limit segments per transcript for speed
+  max_segments_per_transcript: 3
+  symptom_domains:
+    - "P1_Unusual_Thoughts"
+    - "P2_Suspiciousness"
+    - "P3_Unusual_Somatic"
+    - "P4_Disoriented"
+    - "P5_Focused_Thoughts"
+    - "P6_Experiences"
+    - "P7_Perceiving"
+    - "P8_Confusion"
+    - "P9_Daydreaming"
+    - "P10_Time_Experience"
+    - "P11_Depersonalisation"
+    - "P12_Derealisation"
+    - "P13_Superstitious"
+    - "P14_Control"
+    - "P15_Reading_Minds"
+
+llm:
+  # Gemma configuration for summarization
+  model_name: "google/gemma-2b-it"
+  use_api: false
+  device: "auto"
+  max_new_tokens: 100
+  temperature: 0.0
+  do_sample: false
+
+explanation:
+  shap_algorithm: "transformers"
+  max_samples_for_background: 50
+  output_formats:
+    - "word_level_plot"
+    - "symptom_level_plot"
+
+# Ultra-quick settings
+ultra_quick:
+  enabled: true
+  max_transcripts: 10
+  max_segments_per_transcript: 2
+  use_simple_summarizer_fallback: true
