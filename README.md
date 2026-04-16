@@ -49,26 +49,86 @@ pip install -e ".[dev]"
 ### 1. Generate Synthetic Data
 
 ```bash
-python scripts/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic
+python scripts/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic --split
 ```
 
 ### 2. Train a Model
 
 ```bash
-chirpe-train --config configs/bert_config.yaml --data-dir data/synthetic --output-dir outputs/
+chirpe-train --config configs/bert_config.yaml --data-dir data/synthetic --output-dir outputs/run-name
 ```
 
 ### 3. Make Predictions
 
 ```bash
-chirpe-predict --model-path outputs/best_model --input-file data/synthetic/test_transcript.json --output-dir predictions/
+chirpe-predict --model-path outputs/run-name/best_model --input-file path/to/transcript.json --output-dir predictions
 ```
 
-### 4. Evaluate Explanations
+### 4. Evaluate Model
 
 ```bash
-chirpe-evaluate --predictions predictions/results.json --output-dir evaluation/
+chirpe-evaluate --model-path outputs/run-name/best_model --data-dir data/synthetic --output-dir evaluation
 ```
+
+## ONNX Export and Triton Serving (Classifier Only)
+
+This repository includes scripts to export a trained classifier to ONNX and serve it with Triton Inference Server.
+
+### 1. Install ONNX and Triton client dependencies
+
+```bash
+pip install onnx onnxruntime tritonclient[http]
+```
+
+> [!NOTE]
+> `scripts/export_triton_onnx.py` currently enforces `transformers<5` for export compatibility.
+
+### 2. Export model to Triton repository format
+
+```bash
+python scripts/export_triton_onnx.py \
+  --model-dir outputs/test-config-save/best_model \
+  --triton-repo outputs/triton_model_repository \
+  --model-name chirpe_classifier \
+  --version 1 \
+  --max-batch-size 32 \
+  --opset 17
+```
+
+This generates:
+
+- `outputs/triton_model_repository/chirpe_classifier/config.pbtxt`
+- `outputs/triton_model_repository/chirpe_classifier/1/model.onnx`
+- `outputs/triton_model_repository/chirpe_classifier/1/export_metadata.json`
+
+### 3. Verify ONNX parity against PyTorch
+
+```bash
+python scripts/verify_onnx_parity.py \
+  --hf-model-dir outputs/test-config-save/best_model \
+  --onnx-model-path outputs/triton_model_repository/chirpe_classifier/1/model.onnx \
+  --num-samples 16 \
+  --atol 1e-4 \
+  --rtol 1e-3 \
+  --report-file outputs/triton_model_repository/chirpe_classifier/1/parity_report.json
+```
+
+### 4. Start Triton Inference Server
+
+```bash
+docker run --rm --net=host \
+  -v ${PWD}/outputs/triton_model_repository:/models \
+  nvcr.io/nvidia/tritonserver:24.10-py3 \
+  tritonserver --model-repository=/models
+```
+
+### 5. Client usage tutorial notebook
+
+See `notebooks/02_triton_onnx_pipeline.ipynb` for a step-by-step client flow.
+
+> [!IMPORTANT]
+> Triton serves classifier inference only (tokenized tensor inputs -> logits). Transcript preprocessing,
+> segmentation/summarisation, and segment-level voting remain in application code.
 
 ## Project Structure
 
@@ -153,4 +213,3 @@ If you use CHiRPE in your research, please cite:
 ## License
 
 This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
-
