@@ -113,7 +113,17 @@ python scripts/verify_onnx_parity.py \
   --report-file outputs/triton_model_repository/chirpe_classifier/1/parity_report.json
 ```
 
-### 4. Start Triton Inference Server
+### 4. Local PyTorch to ONNX tutorial notebook
+
+See `notebooks/03_pytorch_vs_onnx.ipynb` for a step-by-step local workflow that covers:
+
+- PyTorch/Hugging Face inference before ONNX export
+- exporting the classifier to ONNX
+- loading `model.onnx` with `onnxruntime`
+- comparing PyTorch and ONNX outputs
+- preprocessing transcripts locally and scoring segment summaries with ONNX
+
+### 5. Start Triton Inference Server
 
 ```bash
 docker run --rm --net=host \
@@ -122,7 +132,7 @@ docker run --rm --net=host \
   tritonserver --model-repository=/models
 ```
 
-### 5. Client usage tutorial notebook
+### 6. Triton client usage tutorial notebook
 
 See `notebooks/02_triton_onnx_pipeline.ipynb` for a step-by-step client flow.
 
