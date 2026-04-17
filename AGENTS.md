@@ -1,4 +1,4 @@
-IMPORTANT: Run any code/commands only in the conda environment `clinicagent`.
+IMPORTANT: Run any code/commands only in the conda environment `chirp`.
 
 # AGENTS.md
 
