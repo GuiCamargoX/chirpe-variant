@@ -23,7 +23,7 @@ Improved summary:"""
 
 
 class SegmentSummarizer:
-    """Summarizes interview segments using LLMs."""
+    """Summarize interview segments using either local or API-backed LLMs."""
 
     def __init__(
         self,
@@ -51,7 +51,7 @@ class SegmentSummarizer:
             self._load_local_model()
 
     def _load_local_model(self):
-        """Load the local HuggingFace model."""
+        """Load a local causal LM and text-generation pipeline."""
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
@@ -90,7 +90,15 @@ class SegmentSummarizer:
             raise
 
     def _generate_local(self, prompt: str, max_length: int = 512) -> str:
-        """Generate text using local model."""
+        """Generate text with the local HF pipeline.
+
+        Args:
+            prompt: Prompt text.
+            max_length: Maximum number of new tokens to generate.
+
+        Returns:
+            Generated text (prompt excluded).
+        """
         outputs = self.pipeline(
             prompt,
             max_new_tokens=max_length,
@@ -102,7 +110,12 @@ class SegmentSummarizer:
         return outputs[0]["generated_text"].strip()
 
     def _generate_api(self, prompt: str, max_length: int = 512) -> str:
-        """Generate text using API."""
+        """Generate text via API-backed models.
+
+        Note:
+            This path currently uses the legacy `openai.ChatCompletion.create`
+            interface.
+        """
         if "openai" in self.model_name.lower():
             import openai
 
@@ -127,7 +140,7 @@ class SegmentSummarizer:
             segment_text: The text to summarize
 
         Returns:
-            Summarized text in third person
+            One-paragraph third-person summary.
         """
         if self.use_api:
             # Simplified single-pass for API
@@ -135,11 +148,11 @@ class SegmentSummarizer:
             summary = self._generate_api(prompt)
             return summary
 
-        # First pass - generate initial draft
+        # First pass: produce a faithful draft.
         first_prompt = FIRST_PASS_PROMPT.format(segment=segment_text)
         draft = self._generate_local(first_prompt)
 
-        # Second pass - refine the draft
+        # Second pass: repair omissions and improve coherence.
         second_prompt = SECOND_PASS_PROMPT.format(
             segment=segment_text,
             draft=draft,
@@ -166,7 +179,7 @@ class SegmentSummarizer:
 
 
 class SimpleSummarizer:
-    """A simple rule-based summarizer for testing without LLMs."""
+    """Deterministic fallback summarizer for testing and quick demos."""
 
     def __init__(self):
         """Initialize the simple summarizer."""
@@ -181,7 +194,7 @@ class SimpleSummarizer:
         Returns:
             Simple third-person summary
         """
-        # Remove interviewer questions and keep interviewee responses
+        # Heuristic removal of obvious interviewer questions.
         lines = segment_text.split("\n")
         interviewee_lines = []
 
@@ -192,7 +205,7 @@ class SimpleSummarizer:
 
         content = " ".join(interviewee_lines)
 
-        # Convert to third person
+        # Basic first-person to third-person substitutions.
         content = content.replace("I ", "The interviewee ")
         content = content.replace("I'm ", "The interviewee is ")
         content = content.replace("I've ", "The interviewee has ")
@@ -201,7 +214,7 @@ class SimpleSummarizer:
         content = content.replace("me ", "them ")
         content = content.replace("Me ", "Them ")
 
-        # Truncate if too long
+        # Keep fallback summaries short and predictable.
         if len(content.split()) > 100:
             content = " ".join(content.split()[:100]) + "..."
 

@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class TranscriptPreprocessor:
-    """Main preprocessing pipeline for PSYCHS transcripts."""
+    """Pipeline that segments transcripts and summarizes each mapped segment.
+
+    This class is the bridge between raw interview transcripts and classifier-
+    ready text snippets.
+    """
 
     def __init__(
         self,
@@ -57,14 +61,21 @@ class TranscriptPreprocessor:
             participant_id: Participant identifier
 
         Returns:
-            Processed data with segments and summaries
+            Dictionary with keys:
+            - `participant_id`
+            - `segments`: list of per-domain dictionaries containing text,
+              summary, and positional metadata
+            - `num_segments`
+            - `domains_covered`
         """
         # Step 1: Segment by symptom domain
         segments = self.segmenter.segment_transcript(transcript)
 
-        # Step 2: Summarize each segment
+        # Step 2: Summarize each mapped segment.
         segment_data = []
         for segment in segments:
+            # Unmapped buckets are useful for diagnostics but excluded from
+            # downstream training/prediction payloads.
             if segment.domain == "unmapped":
                 continue
 
@@ -94,7 +105,8 @@ class TranscriptPreprocessor:
 
         Args:
             data: List of transcript data
-            output_dir: Optional directory to save processed data
+            output_dir: Optional directory where `processed_data.json` is
+                written.
 
         Returns:
             List of processed data
@@ -137,13 +149,13 @@ class TranscriptPreprocessor:
         return [seg["summary"] for seg in processed_data.get("segments", [])]
 
     def get_concatenated_summary(self, processed_data: Dict) -> str:
-        """Get all summaries concatenated.
+        """Concatenate all segment summaries into one classifier input string.
 
         Args:
             processed_data: Output from process_transcript
 
         Returns:
-            Concatenated summary text
+            Space-delimited summary text.
         """
         summaries = self.get_summary_texts(processed_data)
         return " ".join(summaries)

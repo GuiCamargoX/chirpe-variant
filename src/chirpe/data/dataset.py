@@ -41,10 +41,19 @@ class CHRPDataset(Dataset):
         self.label_column = label_column
 
     def __len__(self) -> int:
+        """Return number of segment-level samples in the dataset."""
         return len(self.data)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        """Get a single item from the dataset."""
+        """Return a tokenized sample dictionary expected by HF Trainer.
+
+        Args:
+            idx: Sample index.
+
+        Returns:
+            Mapping with token tensors, numeric label tensor, and participant
+            identifier.
+        """
         item = self.data[idx]
 
         text = item[self.text_column]
@@ -52,6 +61,9 @@ class CHRPDataset(Dataset):
 
         # Convert label
         if isinstance(label_str, str):
+            # Unknown string labels default to control class (0) to keep data
+            # loading permissive; upstream validation is recommended for strict
+            # training pipelines.
             label = self.LABEL_MAP.get(label_str, 0)
         else:
             label = int(label_str)
@@ -73,7 +85,12 @@ class CHRPDataset(Dataset):
         }
 
     def get_class_weights(self) -> torch.Tensor:
-        """Calculate class weights for imbalanced dataset."""
+        """Compute inverse-frequency class weights for weighted training.
+
+        Returns:
+            1D tensor where each position corresponds to the weight for that
+            class index.
+        """
         labels = []
         for item in self.data:
             label_str = item[self.label_column]
@@ -129,10 +146,18 @@ class TranscriptLevelDataset(Dataset):
                 })
 
     def __len__(self) -> int:
+        """Return number of flattened segment-level rows."""
         return len(self.flat_data)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        """Get a single item from the dataset."""
+        """Return one flattened segment encoded for model consumption.
+
+        Args:
+            idx: Flat segment index.
+
+        Returns:
+            Tokenized tensors with label, participant ID, and source domain.
+        """
         item = self.flat_data[idx]
 
         text = item["text"]
@@ -188,6 +213,7 @@ def load_data(data_dir: Path, split: str = "train") -> List[Dict]:
     with open(file_path, "r") as f:
         data = json.load(f)
 
+    # Allow both single-record and list payloads for convenience in scripts.
     if isinstance(data, dict):
         data = [data]
 

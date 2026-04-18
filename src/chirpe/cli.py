@@ -1,4 +1,12 @@
-"""Command-line interface for CHiRPE."""
+"""Command-line entrypoints for training, prediction, and evaluation.
+
+The three public CLI functions (`train_cli`, `predict_cli`, and `evaluate_cli`)
+are wired in `pyproject.toml` as `chirpe-train`, `chirpe-predict`, and
+`chirpe-evaluate`.
+
+This module orchestrates end-to-end flows and intentionally keeps most model
+logic in the `chirpe.data` and `chirpe.models` packages.
+"""
 
 import argparse
 import json
@@ -18,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def train_cli():
-    """CLI for training models."""
+    """Train a CHiRPE classifier from config and split JSON files.
+
+    Expected `--data-dir` contents are `train.json` and `val.json` (with
+    fallback splitting from train when val is absent). Transcripts are
+    segmented/summarized, flattened to segment-level samples, then used to
+    fine-tune a Hugging Face sequence classifier.
+    """
     parser = argparse.ArgumentParser(
         description="Train CHiRPE classification model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -84,7 +98,17 @@ def train_cli():
     segmenter = SymptomSegmenter(threshold=config["preprocessing"]["segmentation_threshold"])
 
     def preprocess_data(data, max_segments=3):
-        """Preprocess data into segments."""
+        """Convert transcript-level examples into segment-level examples.
+
+        Args:
+            data: List of transcript records with transcript, participant_id,
+                and label fields.
+            max_segments: Upper bound on how many segments to keep per
+                transcript to control training cost.
+
+        Returns:
+            Flattened list of dictionaries ready for `CHRPDataset`.
+        """
         processed = []
         for item in data:
             result = preprocessor.process_transcript(item["transcript"], item["participant_id"])
@@ -153,7 +177,13 @@ def train_cli():
 
 
 def predict_cli():
-    """CLI for making predictions."""
+    """Run inference for raw transcripts, pre-segmented payloads, or plain text.
+
+    Input JSON supports three shapes:
+    1. `{"transcript": [...]}` for full preprocessing + segment voting
+    2. `{"segments": [...]}` for pre-segmented summaries
+    3. `{"text": "..."}` for direct single-text classification
+    """
     parser = argparse.ArgumentParser(
         description="Make predictions with CHiRPE model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -217,7 +247,8 @@ def predict_cli():
     with open(args.input_file, "r") as f:
         input_data = json.load(f)
 
-    # Handle both single transcript (dict) and batch (list)
+    # Batch JSON inputs are accepted for convenience; this CLI predicts on the
+    # first item only to keep output schema stable.
     if isinstance(input_data, list):
         input_data = input_data[0]  # Use first transcript for prediction
 
@@ -228,7 +259,8 @@ def predict_cli():
 
         # Use config values if available, otherwise defaults
         seg_threshold = config.get("preprocessing", {}).get("segmentation_threshold", 0.8)
-        # Check if we should use LLM summarizer
+        # LLM summarization is opt-in and configuration-driven. Defaults favor
+        # simple summarization for deterministic and lightweight CLI behavior.
         use_llm = False
         if config.get("llm", {}).get("use_api", False):
             use_llm = True
@@ -305,7 +337,12 @@ def predict_cli():
 
 
 def evaluate_cli():
-    """CLI for evaluating models."""
+    """Evaluate a trained model on test split with CLI-consistent preprocessing.
+
+    This uses the same transcript-to-segment flattening pattern as training,
+    then reports classification metrics through the `ModelTrainer.evaluate`
+    path.
+    """
     parser = argparse.ArgumentParser(
         description="Evaluate CHiRPE model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

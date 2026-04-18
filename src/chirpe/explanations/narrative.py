@@ -19,7 +19,7 @@ Quote:"""
 
 
 class NarrativeGenerator:
-    """Generate clinical narrative explanations."""
+    """Generate clinician-style narrative summaries from segment excerpts."""
 
     def __init__(
         self,
@@ -64,7 +64,15 @@ class NarrativeGenerator:
             raise
 
     def _generate_local(self, prompt: str, max_length: int = 256) -> str:
-        """Generate using local model."""
+        """Generate text from the local causal language model.
+
+        Args:
+            prompt: Prompt string.
+            max_length: Maximum number of new tokens.
+
+        Returns:
+            Generated completion without prompt prefix.
+        """
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
 
         outputs = self.model.generate(
@@ -80,7 +88,11 @@ class NarrativeGenerator:
         return generated[len(prompt) :].strip()
 
     def _generate_api(self, prompt: str) -> str:
-        """Generate using API."""
+        """Generate text via API-backed models.
+
+        Note:
+            This path currently relies on the legacy OpenAI ChatCompletion API.
+        """
         if "gpt" in self.model_name.lower():
             import openai
 
@@ -117,7 +129,7 @@ class NarrativeGenerator:
             full_transcript: Full transcript for quote extraction
 
         Returns:
-            Dictionary with narrative and quote
+            Dictionary with narrative text and optional supporting quote.
         """
         # Generate narrative
         prompt = NARRATIVE_PROMPT.format(symptom=symptom, excerpt=excerpt)
@@ -129,7 +141,7 @@ class NarrativeGenerator:
 
         result = {"narrative": narrative, "symptom": symptom}
 
-        # Generate quote if requested
+        # Generate quote if requested and transcript context is available.
         if include_quote and full_transcript:
             quote_prompt = QUOTE_PROMPT.format(
                 symptom=symptom, transcript=full_transcript
@@ -173,7 +185,7 @@ class NarrativeGenerator:
 
 
 class SimpleNarrativeGenerator:
-    """Simple rule-based narrative generator for testing."""
+    """Deterministic narrative fallback used in tests and fast demos."""
 
     def __init__(self):
         """Initialize simple generator."""

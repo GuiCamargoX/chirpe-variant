@@ -132,12 +132,17 @@ class Segment:
     end_idx: int
 
     def get_text(self) -> str:
-        """Get concatenated text from all utterances."""
+        """Get concatenated text from all utterances in this segment."""
         return " ".join([u["text"] for u in self.utterances])
 
 
 class SymptomSegmenter:
-    """Segments transcripts into PSYCHS symptom domains."""
+    """Segment transcripts into PSYCHS domains using fuzzy keyword matching.
+
+    The segmenter treats interviewer turns as boundary cues. When an
+    interviewer utterance strongly matches a new domain, subsequent utterances
+    are grouped into a new segment until another domain transition is detected.
+    """
 
     def __init__(
         self,
@@ -150,7 +155,8 @@ class SymptomSegmenter:
             threshold: Fuzzy matching threshold (0-1)
             domains: Custom domain mappings (uses PSYCHS_DOMAINS if None)
         """
-        self.threshold = int(threshold * 100)  # Convert to 0-100 scale for fuzzywuzzy
+        # FuzzyWuzzy scores are 0-100 integers while config uses 0-1 floats.
+        self.threshold = int(threshold * 100)
         self.domains = domains or PSYCHS_DOMAINS
         logger.info(f"Initialized SymptomSegmenter with threshold {threshold}")
 
@@ -161,7 +167,8 @@ class SymptomSegmenter:
             text: The utterance text to match
 
         Returns:
-            Best matching domain or None if below threshold
+            Best matching domain, or `None` when no keyword similarity exceeds
+            the configured threshold.
         """
         text_lower = text.lower()
         best_match = None
@@ -195,11 +202,11 @@ class SymptomSegmenter:
 
         for i, utterance in enumerate(transcript):
             if utterance.get("speaker") == "interviewer":
-                # Try to match interviewer utterance to a domain
+                # Interviewer prompts drive domain transitions.
                 matched_domain = self._match_utterance_to_domain(utterance["text"])
 
                 if matched_domain and matched_domain != current_domain:
-                    # Save previous segment if exists
+                    # Save previous segment before switching domains.
                     if current_utterances:
                         segments.append(
                             Segment(
@@ -209,17 +216,17 @@ class SymptomSegmenter:
                                 end_idx=i - 1,
                             )
                         )
-                    # Start new segment
+                    # Start collecting a new domain segment.
                     current_domain = matched_domain
                     current_utterances = [utterance]
                     start_idx = i
                 else:
                     current_utterances.append(utterance)
             else:
-                # Interviewee utterance - add to current segment
+                # Interviewee turns are attached to the current domain context.
                 current_utterances.append(utterance)
 
-        # Don't forget the last segment
+        # Finalize trailing segment after loop completion.
         if current_utterances:
             segments.append(
                 Segment(

@@ -1,4 +1,4 @@
-"""Model training and inference modules."""
+"""Public model-layer API for classifier and trainer components."""
 
 from chirpe.models.classifier import CHRClassifier
 from chirpe.models.trainer import ModelTrainer

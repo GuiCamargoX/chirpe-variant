@@ -1,4 +1,4 @@
-"""Metrics calculation utilities."""
+"""Classification metric utilities for evaluation and reporting."""
 
 from typing import Dict, Optional
 
@@ -21,7 +21,7 @@ def calculate_all_metrics(
     y_pred: np.ndarray,
     y_prob: Optional[np.ndarray] = None,
 ) -> Dict[str, float]:
-    """Calculate all classification metrics.
+    """Calculate weighted and binary-specific metrics.
 
     Args:
         y_true: True labels
@@ -29,7 +29,8 @@ def calculate_all_metrics(
         y_prob: Predicted probabilities
 
     Returns:
-        Dictionary of metrics
+        Dictionary of scalar metrics. Binary-only metrics (for example AUC,
+        specificity) are included only when both classes are present.
     """
     metrics = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
@@ -40,7 +41,7 @@ def calculate_all_metrics(
         "recall": float(recall_score(y_true, y_pred, average="weighted", zero_division=0)),
     }
 
-    # Binary classification metrics
+    # Binary-only diagnostics are gated to avoid invalid multiclass behavior.
     if len(np.unique(y_true)) == 2:
         metrics["f1_binary"] = float(f1_score(y_true, y_pred, zero_division=0))
         metrics["precision_binary"] = float(
@@ -68,7 +69,7 @@ def calculate_all_metrics(
 
 
 def print_metrics(metrics: Dict[str, float]) -> None:
-    """Pretty print metrics.
+    """Pretty-print a metric dictionary to stdout.
 
     Args:
         metrics: Dictionary of metrics

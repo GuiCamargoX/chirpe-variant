@@ -24,20 +24,34 @@ logger = logging.getLogger(__name__)
 
 
 def set_seed(seed):
-    """Set random seeds for reproducibility."""
+    """Set Python/NumPy/PyTorch seeds for reproducible runs."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
 
 def limit_data(data, max_samples):
-    """Limit data to max_samples."""
+    """Cap dataset size for fast experiments.
+
+    Args:
+        data: Sequence-like data collection.
+        max_samples: Optional maximum number of rows to keep.
+
+    Returns:
+        Truncated data when `max_samples` is set and smaller than data length.
+    """
     if max_samples and len(data) > max_samples:
         return data[:max_samples]
     return data
 
 
 def main():
+    """Train a classifier using YAML-driven settings and lightweight preprocessing.
+
+    This script is a fast, config-oriented training path used for quick
+    experiments and demos. It differs from `chirpe-train` in output metadata
+    and preprocessing details.
+    """
     parser = argparse.ArgumentParser(
         description="Train CHiRPE from config file",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -142,6 +156,16 @@ def main():
     max_segments = config["preprocessing"].get("max_segments_per_transcript", 3)
 
     def process_split(data, name):
+        """Preprocess one dataset split into segment-level training rows.
+
+        Args:
+            data: Transcript-level input records.
+            name: Human-readable split label used in progress logging.
+
+        Returns:
+            List of dictionaries with participant_id, summary, and numeric
+            binary label.
+        """
         processed = []
         for i, item in enumerate(data, 1):
             print(f"\n[{name}] {item['participant_id']} ({i}/{len(data)})")
@@ -201,15 +225,20 @@ Summarize this clinical interview segment in one sentence:
     )
 
     class ConfigDataset:
+        """Minimal torch-style dataset used by this script's Trainer path."""
+
         def __init__(self, data, tokenizer, max_length):
+            """Store preprocessed rows and tokenizer settings."""
             self.data = data
             self.tokenizer = tokenizer
             self.max_length = max_length
 
         def __len__(self):
+            """Return number of preprocessed rows."""
             return len(self.data)
 
         def __getitem__(self, idx):
+            """Return tokenized sample and integer label for one row."""
             item = self.data[idx]
             encoding = self.tokenizer(
                 item["summary"],

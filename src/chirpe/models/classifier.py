@@ -23,7 +23,11 @@ MODEL_MAP = {
 
 
 class CHRClassifier:
-    """BERT-based classifier for Clinical High-Risk for Psychosis."""
+    """Wrapper around Hugging Face sequence classification models.
+
+    The class provides convenience helpers for tokenization, batched
+    predictions, and segment-level voting strategies used by CHiRPE flows.
+    """
 
     def __init__(
         self,
@@ -71,7 +75,7 @@ class CHRClassifier:
             texts: Input text or list of texts
 
         Returns:
-            Tokenized inputs
+            Tokenized tensor dictionary ready for model forward pass.
         """
         if isinstance(texts, str):
             texts = [texts]
@@ -94,7 +98,8 @@ class CHRClassifier:
             return_probs: Whether to return probabilities
 
         Returns:
-            Predicted labels (and probabilities if return_probs=True)
+            Predicted label indices, optionally with probability matrix of shape
+            `[n_samples, num_labels]`.
         """
         self.model.eval()
 
@@ -121,11 +126,13 @@ class CHRClassifier:
         """Predict from multiple segments with voting.
 
         Args:
-            segments: List of segment dicts with 'summary' key
-            voting: Voting strategy ('majority' or 'average')
+            segments: List of segment dictionaries with `summary` keys.
+            voting: Transcript-level aggregation strategy:
+                - `majority`: majority vote over segment predictions
+                - `average`: argmax over mean segment probabilities
 
         Returns:
-            Prediction results
+            Dictionary containing transcript prediction and per-segment outputs.
         """
         summaries = [seg["summary"] for seg in segments]
         predictions, probs = self.predict(summaries, return_probs=True)
@@ -224,7 +231,9 @@ class EnsembleClassifier:
 
         Args:
             texts: Input text or list of texts
-            method: Ensemble method ('average' or 'vote')
+            method: Ensemble method:
+                - `average`: average class probabilities, then argmax
+                - `vote`: per-model hard voting
 
         Returns:
             Predicted labels

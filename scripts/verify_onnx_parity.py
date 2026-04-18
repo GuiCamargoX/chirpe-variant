@@ -15,7 +15,7 @@ try:
     import onnxruntime as ort
 except ImportError as exc:
     raise SystemExit(
-        "Missing dependency 'onnxruntime'. Install with: conda run -n clinicagent pip install onnxruntime"
+        "Missing dependency 'onnxruntime'. Install with: conda run -n chirp pip install onnxruntime"
     ) from exc
 
 
@@ -36,6 +36,7 @@ DEFAULT_TEXTS = [
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for ONNX parity verification."""
     parser = argparse.ArgumentParser(
         description="Verify logit parity between HF model and ONNX Runtime model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -95,6 +96,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_texts(texts_file: Path, num_samples: int) -> List[str]:
+    """Load evaluation text samples from file or fallback defaults.
+
+    Args:
+        texts_file: Optional JSON file containing a list of strings.
+        num_samples: Number of samples to return.
+
+    Returns:
+        List of exactly `num_samples` strings (with repetition when needed).
+    """
     if texts_file:
         with open(texts_file, "r") as file:
             payload = json.load(file)
@@ -119,6 +129,11 @@ def load_texts(texts_file: Path, num_samples: int) -> List[str]:
 
 
 def build_ort_inputs(encoded_batch: Dict[str, torch.Tensor], input_names: List[str]) -> Dict[str, np.ndarray]:
+    """Build ONNX Runtime input dictionary from tokenized tensors.
+
+    Missing optional inputs are synthesized (`token_type_ids` zeros,
+    `attention_mask` ones) to match exported model requirements.
+    """
     if "input_ids" not in encoded_batch:
         raise ValueError("Tokenized batch does not include input_ids")
 
@@ -144,6 +159,15 @@ def build_ort_inputs(encoded_batch: Dict[str, torch.Tensor], input_names: List[s
 
 
 def filter_model_inputs(model, encoded_batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    """Filter tokenized tensors to the model forward signature.
+
+    Args:
+        model: Hugging Face model instance.
+        encoded_batch: Tokenizer output dictionary.
+
+    Returns:
+        Input dictionary containing only accepted forward arguments.
+    """
     accepted_names = set(inspect.signature(model.forward).parameters)
     filtered = {name: tensor for name, tensor in encoded_batch.items() if name in accepted_names}
 
@@ -154,6 +178,10 @@ def filter_model_inputs(model, encoded_batch: Dict[str, torch.Tensor]) -> Dict[s
 
 
 def main() -> None:
+    """Compare Hugging Face and ONNX Runtime logits for parity checks.
+
+    Exits with non-zero status if shape mismatch occurs or parity criteria fail.
+    """
     args = parse_args()
 
     if not args.hf_model_dir.exists():

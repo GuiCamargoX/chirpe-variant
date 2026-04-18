@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class SHAPExplainer:
-    """Generate SHAP explanations for CHiRPE predictions."""
+    """Generate SHAP explanations and derived visual summaries.
+
+    The explainer consumes segment summaries (or free text), computes token
+    attributions, and exposes convenience helpers for multiple clinician-facing
+    output formats.
+    """
 
     def __init__(
         self,
@@ -42,9 +47,10 @@ class SHAPExplainer:
         self._create_explainer()
 
     def _create_explainer(self):
-        """Create the SHAP explainer."""
+        """Create and store a SHAP text explainer bound to this model."""
         # Define prediction function
         def predict_fn(texts):
+            """Convert raw texts to class probabilities for SHAP internals."""
             # Handle various input types from SHAP masker
             if isinstance(texts, str):
                 texts = [texts]
@@ -54,7 +60,8 @@ class SHAPExplainer:
             elif not isinstance(texts, list):
                 texts = [str(texts)]
 
-            # Filter out empty strings
+            # SHAP may emit empty masks; normalize to safe placeholder strings
+            # to avoid tokenizer edge cases.
             texts = [str(t) if t else "" for t in texts]
 
             # Replace any remaining empty strings with placeholder
@@ -74,7 +81,7 @@ class SHAPExplainer:
                 probs = torch.softmax(outputs.logits, dim=-1)
             return probs.cpu().numpy()
 
-        # Create masker
+        # Text masker uses tokenizer token boundaries for perturbations.
         masker = shap.maskers.Text(self.tokenizer)
 
         # Create explainer
@@ -90,7 +97,7 @@ class SHAPExplainer:
             batch_size: Batch size for SHAP computation
 
         Returns:
-            List of SHAP explanations
+            List of SHAP explanation objects, one per input text.
         """
         if isinstance(texts, str):
             texts = [texts]
@@ -113,7 +120,7 @@ class SHAPExplainer:
             segments: List of segment dicts with 'summary' key
 
         Returns:
-            Dictionary mapping domain to explanation
+            Dictionary mapping segment domain to SHAP explanation.
         """
         # Filter out segments with empty summaries
         valid_segments = [seg for seg in segments if seg.get("summary", "").strip()]
@@ -185,9 +192,8 @@ class SHAPExplainer:
         for sent_idx, sentence in enumerate(sentences):
             if not sentence.strip():
                 continue
-            # Find tokens in this sentence
-            # This is a simplified version - proper implementation would
-            # align tokens to sentences
+            # Placeholder heuristic: token-to-sentence alignment is not yet
+            # implemented, so sentence ranking is currently random.
             score = np.random.random()  # Placeholder
             sentence_scores.append((sentence.strip(), score))
 
@@ -205,11 +211,11 @@ class SHAPExplainer:
             explanations: Dictionary of domain -> explanation
 
         Returns:
-            Dictionary of domain -> mean SHAP value
+            Dictionary of domain -> mean absolute SHAP value.
         """
         domain_scores = {}
         for domain, exp in explanations.items():
-            # Mean absolute SHAP value for this domain
+            # Mean absolute attribution magnitude is used as domain salience.
             score = float(np.mean(np.abs(exp.values)))
             domain_scores[domain] = score
         return domain_scores
@@ -303,7 +309,8 @@ class SHAPExplainer:
         """Create token-level heatmap visualization.
 
         Args:
-            text: Original text
+            text: Original text (included for API symmetry; token labels are
+                taken from explanation data).
             explanation: SHAP explanation
             save_path: Path to save figure
             show: Whether to show the plot

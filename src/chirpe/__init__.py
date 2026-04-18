@@ -2,6 +2,12 @@
 
 A human-centred NLP framework for predicting Clinical High-Risk for Psychosis (CHR-P)
 from semi-structured clinical interview transcripts.
+
+Note:
+    Importing `chirpe` eagerly imports key classes for convenience. Lightweight
+    scripts may prefer importing submodules directly (for example,
+    `from chirpe.data.preprocessor import TranscriptPreprocessor`) to avoid
+    unnecessary initialization overhead.
 """
 
 __version__ = "0.1.0"

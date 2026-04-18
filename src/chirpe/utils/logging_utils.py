@@ -1,4 +1,4 @@
-"""Logging utilities."""
+"""Logging setup utilities used by CLI entrypoints and scripts."""
 
 import logging
 import sys
@@ -11,7 +11,7 @@ def setup_logging(
     log_file: Optional[Path] = None,
     format_string: Optional[str] = None,
 ) -> logging.Logger:
-    """Setup logging configuration.
+    """Configure root logger with console and optional file handlers.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
@@ -19,7 +19,11 @@ def setup_logging(
         format_string: Custom format string
 
     Returns:
-        Root logger
+        Root logger instance.
+
+    Notes:
+        Existing root handlers are cleared to avoid duplicate logs when this
+        function is called multiple times in the same process.
     """
     if format_string is None:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

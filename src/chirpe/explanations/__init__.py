@@ -1,4 +1,4 @@
-"""Explanation generation modules."""
+"""Public explainability API (SHAP and narrative generators)."""
 
 from chirpe.explanations.shap_generator import SHAPExplainer
 from chirpe.explanations.narrative import NarrativeGenerator

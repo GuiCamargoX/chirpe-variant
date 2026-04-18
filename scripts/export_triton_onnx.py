@@ -15,14 +15,14 @@ try:
     import onnx
 except ImportError as exc:
     raise SystemExit(
-        "Missing dependency 'onnx'. Install with: conda run -n clinicagent pip install onnx"
+        "Missing dependency 'onnx'. Install with: conda run -n chirp pip install onnx"
     ) from exc
 
 try:
     import onnxruntime as ort
 except ImportError as exc:
     raise SystemExit(
-        "Missing dependency 'onnxruntime'. Install with: conda run -n clinicagent pip install onnxruntime"
+        "Missing dependency 'onnxruntime'. Install with: conda run -n chirp pip install onnxruntime"
     ) from exc
 
 
@@ -47,16 +47,32 @@ class SequenceClassifierExportWrapper(torch.nn.Module):
     """Wrap a HF classifier to expose logits only."""
 
     def __init__(self, model: torch.nn.Module, input_names: Sequence[str]):
+        """Store model and fixed input name ordering for ONNX export.
+
+        Args:
+            model: Hugging Face sequence classification model.
+            input_names: Ordered list of input tensor names used to map positional
+                ONNX arguments back to keyword arguments.
+        """
         super().__init__()
         self.model = model
         self.input_names = list(input_names)
 
     def forward(self, *model_inputs: torch.Tensor) -> torch.Tensor:
+        """Forward pass that returns logits only.
+
+        Args:
+            *model_inputs: Positional tensors in `self.input_names` order.
+
+        Returns:
+            Logits tensor from the wrapped classifier.
+        """
         inputs = {name: value for name, value in zip(self.input_names, model_inputs)}
         return self.model(**inputs).logits
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for ONNX export."""
     parser = argparse.ArgumentParser(
         description="Export a Hugging Face classifier to Triton ONNX format",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -124,6 +140,20 @@ def get_dummy_inputs(
     dummy_text: str,
     max_length: int,
 ) -> Tuple[List[str], Tuple[torch.Tensor, ...]]:
+    """Build sample inputs used to trace/export the ONNX graph.
+
+    Args:
+        model: Hugging Face classifier model.
+        tokenizer: Hugging Face tokenizer associated with the model.
+        dummy_text: Seed sentence used for dummy tokenization.
+        max_length: Tokenizer maximum sequence length.
+
+    Returns:
+        Tuple of ordered input names and corresponding input tensors.
+
+    Raises:
+        ValueError: If `input_ids` is missing from resolved model inputs.
+    """
     batch = tokenizer(
         [dummy_text, f"{dummy_text} Additional context for dynamic sequence axes."],
         padding=True,
@@ -149,6 +179,11 @@ def make_dynamic_axes(
     input_names: Sequence[str],
     input_tensors: Sequence[torch.Tensor],
 ) -> Dict[str, Dict[int, str]]:
+    """Create dynamic axis metadata for ONNX export.
+
+    Batch dimension is always dynamic; sequence length is dynamic for rank>=2
+    input tensors.
+    """
     dynamic_axes: Dict[str, Dict[int, str]] = {}
 
     for name, tensor in zip(input_names, input_tensors):
@@ -168,6 +203,15 @@ def export_model(
     input_tensors: Sequence[torch.Tensor],
     opset: int,
 ) -> None:
+    """Export wrapper model to ONNX with dynamic axes.
+
+    Args:
+        wrapper: Export wrapper that outputs logits.
+        model_path: Output path for `model.onnx`.
+        input_names: ONNX input names in positional order.
+        input_tensors: Dummy tensors matching `input_names`.
+        opset: ONNX opset version.
+    """
     dynamic_axes = make_dynamic_axes(input_names, input_tensors)
 
     torch.onnx.export(
@@ -186,6 +230,15 @@ def export_model(
 
 
 def triton_dims(shape: Sequence, max_batch_size: int) -> List[int]:
+    """Convert ONNX tensor shape to Triton dims format.
+
+    Args:
+        shape: ONNX Runtime shape metadata.
+        max_batch_size: Triton max batch size from config.
+
+    Returns:
+        Dimension list excluding batch axis when batching is enabled.
+    """
     start = 1 if max_batch_size > 0 else 0
     dims: List[int] = []
     for dim in list(shape)[start:]:
@@ -197,12 +250,14 @@ def triton_dims(shape: Sequence, max_batch_size: int) -> List[int]:
 
 
 def format_dims(dims: Sequence[int]) -> str:
+    """Format dimension list for Triton `config.pbtxt` emission."""
     if not dims:
         return ""
     return ", ".join(str(dim) for dim in dims)
 
 
 def to_triton_dtype(ort_type: str) -> str:
+    """Map ONNX Runtime dtype string to Triton dtype enum token."""
     if ort_type not in ORT_TO_TRITON_DTYPE:
         raise ValueError(f"Unsupported ORT tensor type for Triton config: {ort_type}")
     return ORT_TO_TRITON_DTYPE[ort_type]
@@ -214,6 +269,7 @@ def build_config_pbtxt(
     onnx_inputs,
     onnx_outputs,
 ) -> str:
+    """Generate Triton `config.pbtxt` content from ONNX I/O metadata."""
     lines = [
         f'name: "{model_name}"',
         'backend: "onnxruntime"',
@@ -261,6 +317,11 @@ def save_metadata(
     onnx_inputs,
     onnx_outputs,
 ) -> None:
+    """Persist export metadata JSON next to the ONNX model.
+
+    The metadata file helps downstream tooling introspect input/output names,
+    shapes, and original model provenance.
+    """
     payload = {
         "source_model_dir": str(source_model_dir),
         "onnx_model_path": str(onnx_model_path),
@@ -278,6 +339,11 @@ def save_metadata(
 
 
 def main() -> None:
+    """Run the ONNX export pipeline end-to-end.
+
+    This validates arguments, loads the source model/tokenizer, exports ONNX,
+    validates the graph, generates Triton config, and writes metadata.
+    """
     args = parse_args()
 
     major_version = int(transformers.__version__.split(".")[0])

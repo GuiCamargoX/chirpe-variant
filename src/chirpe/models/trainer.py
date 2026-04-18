@@ -29,7 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class ModelTrainer:
-    """Trainer for CHiRPE classification models."""
+    """Thin orchestration layer around Hugging Face `Trainer`.
+
+    This class centralizes training arguments, metric computation, evaluation,
+    and optional cross-validation loops used by CHiRPE scripts and CLI flows.
+    """
 
     def __init__(
         self,
@@ -76,10 +80,11 @@ class ModelTrainer:
         """Compute evaluation metrics.
 
         Args:
-            eval_pred: EvalPrediction object
+            eval_pred: Tuple-like object returned by Hugging Face Trainer,
+                containing logits and label IDs.
 
         Returns:
-            Dictionary of metrics
+            Dictionary of scalar metric values.
         """
         predictions, labels = eval_pred
         preds = np.argmax(predictions, axis=1)
@@ -108,10 +113,12 @@ class ModelTrainer:
 
         Args:
             train_dataset: Training dataset
-            val_dataset: Validation dataset
+            val_dataset: Optional validation dataset. If provided, epoch-level
+                evaluation and early stopping are enabled.
             use_class_weights: Whether to use class weights for imbalance
         """
-        # Compute class weights
+        # Class weights are logged for visibility; custom loss wiring is not
+        # currently injected into Trainer in this implementation.
         if use_class_weights:
             class_weights = train_dataset.get_class_weights()
             logger.info(f"Using class weights: {class_weights}")
@@ -156,7 +163,7 @@ class ModelTrainer:
         logger.info("Starting training...")
         trainer.train()
 
-        # Save best model
+        # Save model/tokenizer in a stable location consumed by CLI prediction.
         trainer.save_model(self.output_dir / "best_model")
         self.classifier.tokenizer.save_pretrained(self.output_dir / "best_model")
 
@@ -169,7 +176,7 @@ class ModelTrainer:
             test_dataset: Test dataset
 
         Returns:
-            Dictionary of evaluation metrics
+            Dictionary of evaluation metrics (Trainer-prefixed keys included).
         """
         training_args = TrainingArguments(
             output_dir=str(self.output_dir),
@@ -201,7 +208,7 @@ class ModelTrainer:
             n_splits: Number of folds
 
         Returns:
-            List of fold results
+            List of per-fold evaluation metric dictionaries.
         """
         from sklearn.model_selection import StratifiedKFold
 
@@ -215,7 +222,8 @@ class ModelTrainer:
         for fold, (train_idx, val_idx) in enumerate(skf.split(indices, labels)):
             logger.info(f"Fold {fold + 1}/{n_splits}")
 
-            # Create subsets
+            # Create subsets from original raw entries to preserve tokenization
+            # settings and label handling.
             train_data = [dataset.data[i] for i in train_idx]
             val_data = [dataset.data[i] for i in val_idx]
 
@@ -242,7 +250,7 @@ class ModelTrainer:
             fold_results = self.evaluate(val_subset)
             results.append(fold_results)
 
-        # Aggregate results
+        # Aggregate means/stds for logging visibility.
         aggregated = {}
         for key in results[0].keys():
             values = [r[key] for r in results if key in r]

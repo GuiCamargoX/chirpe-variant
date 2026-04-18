@@ -1,4 +1,7 @@
-"""Configuration utilities."""
+"""Configuration loading/saving helpers.
+
+These helpers keep YAML interactions centralized for CLI and scripts.
+"""
 
 import logging
 from pathlib import Path
@@ -16,7 +19,7 @@ def load_config(config_path: Path) -> Dict[str, Any]:
         config_path: Path to config file
 
     Returns:
-        Configuration dictionary
+        Parsed configuration dictionary.
     """
     config_path = Path(config_path)
 
@@ -35,7 +38,7 @@ def save_config(config: Dict[str, Any], output_path: Path) -> None:
 
     Args:
         config: Configuration dictionary
-        output_path: Path to save to
+        output_path: Path where YAML should be written.
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -47,14 +50,14 @@ def save_config(config: Dict[str, Any], output_path: Path) -> None:
 
 
 def merge_configs(base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge two configuration dictionaries.
+    """Recursively merge two configuration dictionaries.
 
     Args:
         base_config: Base configuration
         override_config: Override configuration
 
     Returns:
-        Merged configuration
+        New merged configuration where `override_config` values win.
     """
     merged = base_config.copy()
 

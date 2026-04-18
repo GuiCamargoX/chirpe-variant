@@ -1,4 +1,8 @@
-"""Data processing and loading modules."""
+"""Public data-layer API for loading and preprocessing transcripts.
+
+These imports expose the most common building blocks used by training and
+prediction entrypoints.
+"""
 
 from chirpe.data.preprocessor import TranscriptPreprocessor
 from chirpe.data.segmentation import SymptomSegmenter
