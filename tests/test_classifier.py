@@ -84,14 +84,3 @@ class TestCHRClassifier:
         assert "segment_predictions" in results
         assert "num_segments" in results
         assert results["num_segments"] == len(segments)
-
-
-class TestEnsembleClassifier:
-    """Test EnsembleClassifier class."""
-
-    def test_initialization(self):
-        """Test ensemble initialization."""
-        # This would require actual model paths
-        # For now, just verify the class exists
-        from chirpe.models.classifier import EnsembleClassifier
-        assert EnsembleClassifier is not None

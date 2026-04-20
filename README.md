@@ -13,14 +13,14 @@ CHiRPE is a human-centred NLP framework for predicting Clinical High-Risk for Ps
 The CHiRPE pipeline processes PSYCHS interview transcripts to:
 1. **Segment** transcripts into 15 symptom domains using fuzzy string matching
 2. **Summarise** segments using LLMs (rephrased to third-person)
-3. **Classify** using domain-specific BERT models (BERT, ClinicalBERT, MentalBERT)
+3. **Classify** each segment with a single selected backbone (BERT, ClinicalBERT, or MentalBERT) and aggregate with voting
 4. **Explain** predictions using novel SHAP formats co-designed with clinicians
 
 ## Features
 
 - **Symptom Domain Segmentation**: Maps interviewer utterances to 15 PSYCHS symptom domains
 - **LLM Summarisation**: Rephrases interview segments to match BERT pretraining data
-- **Multi-Model Classification**: Supports BERT, ClinicalBERT, and MentalBERT
+- **Single-Model Classification**: Choose one backbone per run (BERT, ClinicalBERT, or MentalBERT)
 - **Clinician-Friendly Explanations**:
   - Word-level SHAP plots
   - Token-level heatmaps
