@@ -213,10 +213,32 @@ pytest tests/ -v --cov=chirpe
 If you use CHiRPE in your research, please cite:
 
 ```bibtex
-@article{fong2025chirpe,
-  title={CHiRPE: A Step Towards Real-World Clinical NLP with Clinician-Oriented Model Explanations},
-  author={Fong, Stephanie and Wang, Zimu and Oliveira, Guilherme C. and others},
-  year={2025}
+@inproceedings{fong-etal-2026-chirpe,
+    title = "{CH}i{RPE}: A Step Towards Real-World Clinical {NLP} with Clinician-Oriented Model Explanations",
+    author = "Fong, Stephanie  and
+      Wang, Zimu  and
+      Oliveira, Guilherme C  and
+      Zhao, Xiangyu  and
+      Jiang, Yiwen  and
+      Liu, Jiahe  and
+      Colton, Beau-Luke  and
+      Woods, Scott W.  and
+      Shenton, Martha  and
+      Nelson, Barnaby  and
+      Ge, Zongyuan  and
+      Dwyer, Dominic",
+    editor = "Demberg, Vera  and
+      Inui, Kentaro  and
+      Marquez, Llu{\'i}s",
+    booktitle = "Proceedings of the 19th Conference of the {E}uropean Chapter of the {A}ssociation for {C}omputational {L}inguistics (Volume 2: Short Papers)",
+    month = mar,
+    year = "2026",
+    address = "Rabat, Morocco",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.eacl-short.46/",
+    doi = "10.18653/v1/2026.eacl-short.46",
+    pages = "646--658",
+    ISBN = "979-8-89176-381-4",
 }
 ```
 

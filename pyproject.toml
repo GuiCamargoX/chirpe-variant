@@ -5,9 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "chirpe"
 version = "0.1.0"
-description = "CHiRPE: Clinical High-Risk Prediction with Explainability"
+description = "Human-centered NLP framework for predicting clinical high-risk for psychosis from interview transcripts, with BERT classification and SHAP explainability."
 readme = "README.md"
 license = {text = "Apache-2.0"}
+keywords = [
+    "nlp",
+    "clinical-nlp",
+    "mental-health",
+    "psychiatry",
+    "psychosis",
+    "clinical-high-risk",
+    "explainable-ai",
+    "shap",
+    "bert",
+    "transformers",
+    "huggingface",
+    "pytorch",
+    "transcript-analysis",
+    "healthcare-ai",
+    "onnx",
+]
+urls = {Repository = "https://github.com/GuiCamargoX/chirpe-variant"}
 authors = [
     {name = "CHiRPE Team", email = "stephanie.fong@unimelb.edu.au"}
 ]
