@@ -1,10 +1,10 @@
 # String-In ONNX Project Checklist (CHiRPE)
 
 ## 0) Scope Lock + Prerequisites
-- [ ] Confirm scope: single-model per run + segment voting (no multi-model ensemble).
-- [ ] Confirm target artifacts: 3 fused ONNX models (`bert`, `clinicalbert`, `mentalbert`).
-- [ ] Confirm deployment can load ORT Extensions custom-op library in Triton.
-- [ ] Pin versions: Triton, ONNX Runtime, onnxruntime-extensions, transformers, torch.
+- [x] Confirm scope: single-model per run + segment voting (no multi-model ensemble).
+- [x] Confirm target artifacts: 3 fused ONNX models (`bert`, `clinicalbert`, `mentalbert`).
+- [x] Confirm deployment can load ORT Extensions custom-op library in Triton.
+- [x] Pin versions: Triton, ONNX Runtime, onnxruntime-extensions, transformers, torch.
 - **Acceptance:** Written scope and version matrix approved.
 
 ## 1) Baseline Freeze (Current Classifier-Only Path)
