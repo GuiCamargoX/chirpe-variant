@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "allclose": true,
+  "predictions_match": true,
+  "prediction_match_rate": 1.0,
+  "max_abs_diff": 1.2516975402832031e-06,
+  "mean_abs_diff": 4.2188912630081177e-07,
+  "atol": 0.0001,
+  "rtol": 0.001,
+  "num_samples": 32,
+  "torch_shape": [
+    32,
+    2
+  ],
+  "onnx_shape": [
+    32,
+    2
+  ],
+  "onnx_inputs": [
+    "input_ids",
+    "token_type_ids",
+    "attention_mask"
+  ],
+  "onnx_outputs": [
+    "logits"
+  ]
+}

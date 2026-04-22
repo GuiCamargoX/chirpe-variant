@@ -8,11 +8,11 @@ IMPORTANT: Run any code/commands only in the conda environment `chirp`.
 - `data/` and `outputs/` are local artifacts and are gitignored.
 
 ## Commands
-- Generate usable synthetic splits before training: `python scripts/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic --split`
+- Generate usable synthetic splits before training: `python scripts/dataprep/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic --split`
 - Main training entrypoint: `chirpe-train --config configs/bert_config.yaml --data-dir data/synthetic --output-dir outputs/run-name`
 - Main prediction entrypoint: `chirpe-predict --model-path outputs/run-name/best_model --input-file path/to/transcript.json --output-dir predictions`
 - Main evaluation entrypoint: `chirpe-evaluate --model-path outputs/run-name/best_model --data-dir data/synthetic --output-dir evaluation`
-- Fast config-driven training path: `python scripts/train_from_config.py --config configs/ultra_quick_config.yaml --data-dir data/synthetic --output-dir outputs/quick-run`
+- Fast config-driven training path: `python scripts/train/train_from_config.py --config configs/ultra_quick_config.yaml --data-dir data/synthetic --output-dir outputs/quick-run`
 - Do not rely on `python -m chirpe.cli` for normal use; `src/chirpe/cli.py` defaults to `train_cli()` when run directly.
 
 ## Important Quirks
@@ -20,8 +20,8 @@ IMPORTANT: Run any code/commands only in the conda environment `chirp`.
 - `README.md`'s evaluation example is stale. `chirpe-evaluate` does not take `--predictions`; use `--model-path` and `--data-dir`.
 - The two training flows save different metadata:
   - `chirpe-train` writes `best_model/chirpe_config.json`
-  - `scripts/train_from_config.py` writes `final_model/config_used.json`
-- `chirpe-predict` only auto-loads `chirpe_config.json` from the model dir or its parent. Models from `scripts/train_from_config.py` therefore run with defaults unless that config is copied or renamed.
+- `scripts/train/train_from_config.py` writes `final_model/config_used.json`
+- `chirpe-predict` only auto-loads `chirpe_config.json` from the model dir or its parent. Models from `scripts/train/train_from_config.py` therefore run with defaults unless that config is copied or renamed.
 - `tests/test_classifier.py` is not a cheap unit test: it instantiates real Hugging Face models such as `bert-base-uncased`.
 - API-backed LLM paths in `src/chirpe/data/summarizer.py` and `src/chirpe/explanations/narrative.py` still use `openai.ChatCompletion.create` even though the repo depends on `openai>=1.0.0`; treat those code paths as likely stale before relying on them.
 - Avoid `import chirpe` in lightweight scripts or tests; `src/chirpe/__init__.py` eagerly imports the preprocessor, classifier, and SHAP explainer.

@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "model_name": "chirpe_clinicalbert_baseline",
+  "hf_model_dir": "outputs/string_onnx_checkpoints/clinicalbert/best_model",
+  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_baseline_classifier",
+  "triton_image": "nvcr.io/nvidia/tritonserver:24.10-py3",
+  "http_port": 8000,
+  "batch_sizes": [
+    1,
+    4,
+    8
+  ],
+  "warmup_requests": 10,
+  "measured_requests": 60,
+  "max_length": 128,
+  "container_id": "fa751ba211379e251e0b52deb2bb0ea2bc796eaca5a7fe1d8163d7244be88b3c",
+  "model_inputs": [
+    "input_ids",
+    "token_type_ids",
+    "attention_mask"
+  ],
+  "metrics": [
+    {
+      "batch_size": 1,
+      "num_requests": 60,
+      "p50_latency_ms": 16.022712499761838,
+      "p95_latency_ms": 20.72481755026274,
+      "mean_latency_ms": 16.49678014997941,
+      "throughput_samples_per_sec": 60.83114425783969
+    },
+    {
+      "batch_size": 4,
+      "num_requests": 60,
+      "p50_latency_ms": 30.143909999878815,
+      "p95_latency_ms": 40.51158694983314,
+      "mean_latency_ms": 31.818094033390782,
+      "throughput_samples_per_sec": 125.64209050069277
+    },
+    {
+      "batch_size": 8,
+      "num_requests": 60,
+      "p50_latency_ms": 54.19621450027989,
+      "p95_latency_ms": 75.66606690056686,
+      "mean_latency_ms": 57.28953604999939,
+      "throughput_samples_per_sec": 140.146185166038
+    }
+  ],
+  "memory": {
+    "peak_container_memory_bytes": 5083093794,
+    "peak_container_memory_human": "4.73 GiB"
+  },
+  "container_logs_tail": "\n=============================\n== Triton Inference Server ==\n=============================\n\nNVIDIA Release 24.10 (build 117849258)\nTriton Server Version 2.51.0\n\nCopyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nVarious files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nThis container image and its contents are governed by the NVIDIA Deep Learning Container License.\nBy pulling and using the container, you accept the terms and conditions of this license:\nhttps://developer.nvidia.com/ngc/nvidia-deep-learning-container-license\n\nWARNING: The NVIDIA Driver was not detected.  GPU functionality will not be available.\n   Use the NVIDIA Container Toolkit to start this container with GPU support; see\n   https://docs.nvidia.com/datacenter/cloud-native/ .\n"
+}

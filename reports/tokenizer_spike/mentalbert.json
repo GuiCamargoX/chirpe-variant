@@ -1,0 +1,177 @@
+{
+  "backbone": "mentalbert",
+  "model_dir": "outputs/string_onnx_checkpoints/mentalbert/best_model",
+  "onnx_model_path": "outputs/tokenizer_spike/mentalbert/1/model.onnx",
+  "ortx_library_path": "/home/guicamargo/miniconda3/envs/chirp/lib/python3.11/site-packages/onnxruntime_extensions/_extensions_pydll.cpython-311-x86_64-linux-gnu.so",
+  "versions": {
+    "transformers": "4.57.6",
+    "onnxruntime": "1.24.4"
+  },
+  "onnx_checker_passed": true,
+  "ort_without_custom_ops": {
+    "load_passed": false,
+    "error_type": "Fail",
+    "error_message": "[ONNXRuntimeError] : 1 : FAIL : Load model from outputs/tokenizer_spike/mentalbert/1/model.onnx failed:Fatal error: ai.onnx.contrib:BertTokenizer(-1) is not a registered function/op"
+  },
+  "ort_with_custom_ops_loaded": true,
+  "onnx_outputs": [
+    "input_ids",
+    "token_type_ids",
+    "attention_mask",
+    "offset_mapping"
+  ],
+  "edge_cases": [
+    {
+      "case": "empty",
+      "input_chars": 0,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        }
+      }
+    },
+    {
+      "case": "whitespace",
+      "input_chars": 6,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 2,
+          "hf_length": 2,
+          "first_difference": {}
+        }
+      }
+    },
+    {
+      "case": "unicode",
+      "input_chars": 67,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 25,
+          "hf_length": 25,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 25,
+          "hf_length": 25,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 25,
+          "hf_length": 25,
+          "first_difference": {}
+        }
+      }
+    },
+    {
+      "case": "punctuation_heavy",
+      "input_chars": 42,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 35,
+          "hf_length": 35,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 35,
+          "hf_length": 35,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 35,
+          "hf_length": 35,
+          "first_difference": {}
+        }
+      }
+    },
+    {
+      "case": "long_text",
+      "input_chars": 41599,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 6402,
+          "hf_length": 6402,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 6402,
+          "hf_length": 6402,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 6402,
+          "hf_length": 6402,
+          "first_difference": {}
+        }
+      }
+    },
+    {
+      "case": "clinical_like",
+      "input_chars": 92,
+      "all_tensors_exact": true,
+      "tensors": {
+        "input_ids": {
+          "exact_match": true,
+          "onnx_length": 20,
+          "hf_length": 20,
+          "first_difference": {}
+        },
+        "attention_mask": {
+          "exact_match": true,
+          "onnx_length": 20,
+          "hf_length": 20,
+          "first_difference": {}
+        },
+        "token_type_ids": {
+          "exact_match": true,
+          "onnx_length": 20,
+          "hf_length": 20,
+          "first_difference": {}
+        }
+      }
+    }
+  ],
+  "parity_exact": true,
+  "status": "passed"
+}

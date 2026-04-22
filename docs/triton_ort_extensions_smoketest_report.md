@@ -8,7 +8,7 @@ Verify checklist item: Triton can load ONNX Runtime Extensions custom-op library
 ## Commands Executed
 ```bash
 conda run --no-capture-output -n chirp docker pull nvcr.io/nvidia/tritonserver:24.10-py3
-conda run --no-capture-output -n chirp python scripts/smoke_test_triton_ort_extensions.py --run-docker
+conda run --no-capture-output -n chirp python scripts/validation/smoke_test_triton_ort_extensions.py --run-docker
 ```
 
 ## Result
@@ -24,7 +24,7 @@ conda run --no-capture-output -n chirp python scripts/smoke_test_triton_ort_exte
 2. Used that built library in the smoke test:
    - Host path used: `outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so`
 3. Re-ran smoke test:
-   `conda run --no-capture-output -n chirp python scripts/smoke_test_triton_ort_extensions.py --run-docker --ortx-library-host-path outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so`
+   `conda run --no-capture-output -n chirp python scripts/validation/smoke_test_triton_ort_extensions.py --run-docker --ortx-library-host-path outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so`
 
 ## Evidence
 - `server_ready: true`

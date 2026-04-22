@@ -2,7 +2,7 @@
 """Train CHiRPE using a YAML config file.
 
 Usage:
-    python scripts/train_from_config.py --config configs/ultra_quick_config.yaml
+    python scripts/train/train_from_config.py --config configs/ultra_quick_config.yaml
 """
 
 import argparse

@@ -8,15 +8,15 @@
 - **Acceptance:** Written scope and version matrix approved.
 
 ## 1) Baseline Freeze (Current Classifier-Only Path)
-- [ ] Export classifier-only ONNX with current script (`scripts/export_triton_onnx.py`) for each backbone.
-- [ ] Run parity baseline (`scripts/verify_onnx_parity.py`) and save JSON reports.
-- [ ] Collect baseline serving metrics (p50/p95 latency, throughput, memory).
+- [x] Export classifier-only ONNX with current script (`scripts/onnx/export_triton_onnx.py`) for each backbone.
+- [x] Run parity baseline (`scripts/validation/verify_onnx_parity.py`) and save JSON reports.
+- [x] Collect baseline serving metrics (p50/p95 latency, throughput, memory).
 - **Acceptance:** Baseline reports exist for all 3 backbones and are reproducible.
 
 ## 2) Tokenizer ONNX Feasibility Spike
-- [ ] Prototype tokenizer graph generation using ORT Extensions (`gen_processing_models` / tutorial flow).
-- [ ] Validate tokenizer output parity vs HF (`input_ids`, `attention_mask`, `token_type_ids`).
-- [ ] Test edge strings (empty, unicode, punctuation-heavy, long text).
+- [x] Prototype tokenizer graph generation using ORT Extensions (`gen_processing_models` / tutorial flow).
+- [x] Validate tokenizer output parity vs HF (`input_ids`, `attention_mask`, `token_type_ids`).
+- [x] Test edge strings (empty, unicode, punctuation-heavy, long text).
 - **Acceptance:** Tokenizer parity is exact on the test corpus; no unsupported-op errors.
 
 ## 3) Build Fused Tokenizer + Classifier ONNX

@@ -49,7 +49,7 @@ pip install -e ".[dev]"
 ### 1. Generate Synthetic Data
 
 ```bash
-python scripts/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic --split
+python scripts/dataprep/generate_synthetic_data.py --n-participants 100 --output-dir data/synthetic --split
 ```
 
 ### 2. Train a Model
@@ -77,22 +77,22 @@ This repository includes scripts to export a trained classifier to ONNX and serv
 ### 1. Install ONNX and Triton client dependencies
 
 ```bash
-pip install onnx onnxruntime tritonclient[http]
+pip install onnx onnxruntime onnxscript tritonclient[http]
 ```
 
 > [!NOTE]
-> `scripts/export_triton_onnx.py` currently enforces `transformers<5` for export compatibility.
+> `scripts/onnx/export_triton_onnx.py` supports `transformers` 4.x and 5.x via the modern `dynamo=True` exporter path.
 
 ### 2. Export model to Triton repository format
 
 ```bash
-python scripts/export_triton_onnx.py \
+python scripts/onnx/export_triton_onnx.py \
   --model-dir outputs/test-config-save/best_model \
   --triton-repo outputs/triton_model_repository \
   --model-name chirpe_classifier \
   --version 1 \
   --max-batch-size 32 \
-  --opset 17
+  --opset 18
 ```
 
 This generates:
@@ -104,7 +104,7 @@ This generates:
 ### 3. Verify ONNX parity against PyTorch
 
 ```bash
-python scripts/verify_onnx_parity.py \
+python scripts/validation/verify_onnx_parity.py \
   --hf-model-dir outputs/test-config-save/best_model \
   --onnx-model-path outputs/triton_model_repository/chirpe_classifier/1/model.onnx \
   --num-samples 16 \

@@ -25,6 +25,13 @@ except ImportError as exc:
         "Missing dependency 'onnxruntime'. Install with: conda run -n chirp pip install onnxruntime"
     ) from exc
 
+try:
+    import onnxscript as _onnxscript
+except ImportError as exc:
+    raise SystemExit(
+        "Missing dependency 'onnxscript'. Install with: conda run -n chirp pip install onnxscript"
+    ) from exc
+
 
 ORT_TO_TRITON_DTYPE = {
     "tensor(bool)": "TYPE_BOOL",
@@ -110,7 +117,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--opset",
         type=int,
-        default=17,
+        default=18,
         help="ONNX opset version",
     )
     parser.add_argument(
@@ -175,25 +182,29 @@ def get_dummy_inputs(
     return input_names, tensors
 
 
-def make_dynamic_axes(
-    input_names: Sequence[str],
+def make_dynamic_shapes(
     input_tensors: Sequence[torch.Tensor],
-) -> Dict[str, Dict[int, str]]:
-    """Create dynamic axis metadata for ONNX export.
+    sequence_max_length: int,
+) -> Tuple[Tuple[Dict[int, object], ...],]:
+    """Create dynamic shape metadata for torch.export-based ONNX export."""
+    batch_dim = torch.export.Dim("batch_size", min=1)
+    sequence_dim = torch.export.Dim("sequence_length", min=1, max=sequence_max_length)
+    dynamic_shapes: List[Dict[int, object]] = []
 
-    Batch dimension is always dynamic; sequence length is dynamic for rank>=2
-    input tensors.
-    """
-    dynamic_axes: Dict[str, Dict[int, str]] = {}
+    for index, tensor in enumerate(input_tensors):
+        if index == 0:
+            shape_spec: Dict[int, object] = {0: batch_dim}
+            if tensor.ndim >= 2:
+                shape_spec[1] = sequence_dim
+        else:
+            shape_spec = {0: torch.export.Dim.DYNAMIC}
+            if tensor.ndim >= 2:
+                shape_spec[1] = torch.export.Dim.DYNAMIC
+        dynamic_shapes.append(shape_spec)
 
-    for name, tensor in zip(input_names, input_tensors):
-        axes = {0: "batch_size"}
-        if tensor.ndim >= 2:
-            axes[1] = "sequence_length"
-        dynamic_axes[name] = axes
-
-    dynamic_axes["logits"] = {0: "batch_size"}
-    return dynamic_axes
+    # `SequenceClassifierExportWrapper.forward` accepts varargs (`*model_inputs`),
+    # so torch.export treats all tensor arguments as one tuple-valued input.
+    return (tuple(dynamic_shapes),)
 
 
 def export_model(
@@ -202,8 +213,9 @@ def export_model(
     input_names: Sequence[str],
     input_tensors: Sequence[torch.Tensor],
     opset: int,
+    sequence_max_length: int,
 ) -> None:
-    """Export wrapper model to ONNX with dynamic axes.
+    """Export wrapper model to ONNX with torch.export-based exporter.
 
     Args:
         wrapper: Export wrapper that outputs logits.
@@ -211,22 +223,29 @@ def export_model(
         input_names: ONNX input names in positional order.
         input_tensors: Dummy tensors matching `input_names`.
         opset: ONNX opset version.
+        sequence_max_length: Maximum supported sequence length for dynamic
+            shape constraints.
     """
-    dynamic_axes = make_dynamic_axes(input_names, input_tensors)
+    dynamic_shapes = make_dynamic_shapes(
+        input_tensors=input_tensors,
+        sequence_max_length=sequence_max_length,
+    )
 
-    torch.onnx.export(
+    onnx_program = torch.onnx.export(
         wrapper,
         args=tuple(input_tensors),
-        f=str(model_path),
         input_names=list(input_names),
         output_names=["logits"],
         opset_version=opset,
-        export_params=True,
-        do_constant_folding=True,
-        dynamic_axes=dynamic_axes,
-        dynamo=False,
+        dynamo=True,
+        dynamic_shapes=dynamic_shapes,
         external_data=False,
     )
+
+    if onnx_program is None:
+        raise RuntimeError("torch.onnx.export returned None with dynamo=True")
+
+    onnx_program.save(str(model_path), external_data=False)
 
 
 def triton_dims(shape: Sequence, max_batch_size: int) -> List[int]:
@@ -278,20 +297,22 @@ def build_config_pbtxt(
         "input [",
     ]
 
-    for model_input in onnx_inputs:
+    for index, model_input in enumerate(onnx_inputs):
         dtype = to_triton_dtype(model_input.type)
         dims = format_dims(triton_dims(model_input.shape, max_batch_size))
+        suffix = "," if index < len(onnx_inputs) - 1 else ""
         lines.append(
-            f'  {{ name: "{model_input.name}" data_type: {dtype} dims: [ {dims} ] }}'
+            f'  {{ name: "{model_input.name}" data_type: {dtype} dims: [ {dims} ] }}{suffix}'
         )
 
     lines.extend(["]", "", "output ["])
 
-    for model_output in onnx_outputs:
+    for index, model_output in enumerate(onnx_outputs):
         dtype = to_triton_dtype(model_output.type)
         dims = format_dims(triton_dims(model_output.shape, max_batch_size))
+        suffix = "," if index < len(onnx_outputs) - 1 else ""
         lines.append(
-            f'  {{ name: "{model_output.name}" data_type: {dtype} dims: [ {dims} ] }}'
+            f'  {{ name: "{model_output.name}" data_type: {dtype} dims: [ {dims} ] }}{suffix}'
         )
 
     lines.extend(
@@ -347,10 +368,10 @@ def main() -> None:
     args = parse_args()
 
     major_version = int(transformers.__version__.split(".")[0])
-    if major_version >= 5:
+    if major_version < 4:
         raise SystemExit(
-            "ONNX export currently requires transformers<5 in this script. "
-            "Install a 4.x release (for example: pip install 'transformers<5')."
+            "ONNX export requires transformers>=4 in this script. "
+            "Install a supported release (for example: pip install 'transformers>=4')."
         )
 
     if args.version <= 0:
@@ -378,6 +399,9 @@ def main() -> None:
         dummy_text=args.dummy_text,
         max_length=args.max_length,
     )
+    sequence_max_length = int(getattr(model.config, "max_position_embeddings", args.max_length))
+    if sequence_max_length <= 0:
+        sequence_max_length = args.max_length
 
     wrapper = SequenceClassifierExportWrapper(model=model, input_names=input_names)
     wrapper.eval()
@@ -396,6 +420,7 @@ def main() -> None:
         input_names=input_names,
         input_tensors=input_tensors,
         opset=args.opset,
+        sequence_max_length=sequence_max_length,
     )
 
     onnx_model = onnx.load(str(onnx_path))
