@@ -1,4 +1,5 @@
 IMPORTANT: Run any code/commands only in the conda environment `chirp`.
+IMPORTANT: When invoking commands via conda, always use `conda run --no-capture-output -n chirp ...`.
 
 # AGENTS.md
 
@@ -13,6 +14,11 @@ IMPORTANT: Run any code/commands only in the conda environment `chirp`.
 - Main prediction entrypoint: `chirpe-predict --model-path outputs/run-name/best_model --input-file path/to/transcript.json --output-dir predictions`
 - Main evaluation entrypoint: `chirpe-evaluate --model-path outputs/run-name/best_model --data-dir data/synthetic --output-dir evaluation`
 - Fast config-driven training path: `python scripts/train/train_from_config.py --config configs/ultra_quick_config.yaml --data-dir data/synthetic --output-dir outputs/quick-run`
+- Export classifier-only ONNX to Triton layout: `python scripts/onnx/export_triton_onnx.py --model-dir outputs/run-name/best_model --triton-repo outputs/triton_model_repository --model-name chirpe_classifier --version 1 --max-batch-size 32 --opset 18`
+- Verify HF vs ONNX logit parity: `python scripts/validation/verify_onnx_parity.py --hf-model-dir outputs/run-name/best_model --onnx-model-path outputs/triton_model_repository/chirpe_classifier/1/model.onnx --report-file reports/baseline/bert.json`
+- Smoke test Triton ORT Extensions loading: `python scripts/validation/smoke_test_triton_ort_extensions.py --run-docker`
+- Benchmark Triton classifier serving baseline: `python scripts/validation/benchmark_triton_classifier_baseline.py --model-repo outputs/triton_model_repository --model-name chirpe_classifier --hf-model-dir outputs/run-name/best_model --report-file reports/perf/bert.json`
+- Run tokenizer ONNX feasibility spike: `python scripts/experiments/tokenizer_onnx_feasibility_spike.py`
 - Do not rely on `python -m chirpe.cli` for normal use; `src/chirpe/cli.py` defaults to `train_cli()` when run directly.
 
 ## Important Quirks
