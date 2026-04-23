@@ -8,7 +8,7 @@
 
 CHiRPE is a human-centred NLP framework for predicting Clinical High-Risk for Psychosis (CHR-P) from semi-structured clinical interview transcripts. It integrates symptom domain segmentation, LLM summarisation, BERT-based classification, and clinician-friendly SHAP explanations.
 
-## Overview
+## Overview 🔎
 
 The CHiRPE pipeline processes PSYCHS interview transcripts to:
 1. **Segment** transcripts into 15 symptom domains using fuzzy string matching
@@ -16,7 +16,7 @@ The CHiRPE pipeline processes PSYCHS interview transcripts to:
 3. **Classify** each segment with a single selected backbone (BERT, ClinicalBERT, or MentalBERT) and aggregate with voting
 4. **Explain** predictions using novel SHAP formats co-designed with clinicians
 
-## Features
+## Features ✨
 
 - **Symptom Domain Segmentation**: Maps interviewer utterances to 15 PSYCHS symptom domains
 - **LLM Summarisation**: Rephrases interview segments to match BERT pretraining data
@@ -28,7 +28,7 @@ The CHiRPE pipeline processes PSYCHS interview transcripts to:
   - Sentence-level summaries
   - Narrative summaries (hybrid graph + text)
 
-## Installation
+## Installation ⚙️
 
 ### Requirements
 
@@ -44,7 +44,7 @@ conda activate chirpe-env
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## Quick Start 🚀
 
 ### 1. Generate Synthetic Data
 
@@ -70,7 +70,7 @@ chirpe-predict --model-path outputs/run-name/best_model --input-file path/to/tra
 chirpe-evaluate --model-path outputs/run-name/best_model --data-dir data/synthetic --output-dir evaluation
 ```
 
-## ONNX Export and Triton Serving (Classifier Only)
+## ONNX Export and Triton Serving (Classifier Only) 🧩
 
 This repository includes scripts to export a trained classifier to ONNX and serve it with Triton Inference Server.
 
@@ -113,15 +113,14 @@ python scripts/validation/verify_onnx_parity.py \
   --report-file outputs/triton_model_repository/chirpe_classifier/1/parity_report.json
 ```
 
-### 4. Local PyTorch to ONNX tutorial notebook
+### 4. Direct ONNX conversion tutorial notebook
 
-See `notebooks/03_pytorch_vs_onnx.ipynb` for a step-by-step local workflow that covers:
+See `notebooks/02_convert_onnx_tutorial.ipynb` for a beginner-friendly step-by-step workflow that covers:
 
-- PyTorch/Hugging Face inference before ONNX export
-- exporting the classifier to ONNX
-- loading `model.onnx` with `onnxruntime`
-- comparing PyTorch and ONNX outputs
-- preprocessing transcripts locally and scoring segment summaries with ONNX
+- exporting the classifier to ONNX directly in notebook code
+- exporting tokenizer ONNX with ORT Extensions
+- merging tokenizer + classifier into a fused string-input ONNX model
+- running local fused inference with `onnxruntime`
 
 ### 5. Start Triton Inference Server
 
@@ -132,9 +131,14 @@ docker run --rm --net=host \
   tritonserver --model-repository=/models
 ```
 
-### 6. Triton client usage tutorial notebook
+### 6. CHiRPE fused ONNX quickstart notebook
 
-See `notebooks/02_triton_onnx_pipeline.ipynb` for a step-by-step client flow.
+See `notebooks/03_quickstart_fused_onnx.ipynb` for a CHiRPE pipeline walkthrough:
+
+- raw transcript loading and format check
+- CHiRPE preprocessing (`TranscriptPreprocessor`)
+- fused ONNX inference on segment summaries
+- transcript-level majority/average voting
 
 > [!IMPORTANT]
 > Triton serves classifier inference only (tokenized tensor inputs -> logits). Transcript preprocessing,
@@ -159,14 +163,20 @@ chirpe/
 └── scripts/             # Utility scripts
 ```
 
-## Configuration
+## Notebooks 📓
+
+- `notebooks/01_quickstart.ipynb`: classic CHiRPE quick start (data -> train -> predict -> explain)
+- `notebooks/02_convert_onnx_tutorial.ipynb`: direct tutorial to build fused ONNX (tokenizer + classifier)
+- `notebooks/03_quickstart_fused_onnx.ipynb`: CHiRPE quickstart using fused ONNX for segment inference
+
+## Configuration 🧪
 
 Models are configured via YAML files. See `configs/` for examples:
 
 - `bert_config.yaml`: Standard BERT configuration
 
 
-## Data Format
+## Data Format 📝
 
 ### Input Transcript Format
 
@@ -190,7 +200,7 @@ Models are configured via YAML files. See `configs/` for examples:
 ```
 
 
-## Explanation Formats
+## Explanation Formats 🧠
 
 CHiRPE generates five explanation formats:
 
@@ -200,7 +210,7 @@ CHiRPE generates five explanation formats:
 4. **Sentence-level summaries**: Highest-impact sentences
 5. **Narrative summaries**: LLM-generated clinical narratives with quotes
 
-## Testing
+## Testing ✅
 
 Run the test suite:
 
@@ -208,7 +218,7 @@ Run the test suite:
 pytest tests/ -v --cov=chirpe
 ```
 
-## Citation
+## Citation 📚
 
 If you use CHiRPE in your research, please cite:
 
@@ -242,6 +252,6 @@ If you use CHiRPE in your research, please cite:
 }
 ```
 
-## License
+## License 📄
 
 This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
