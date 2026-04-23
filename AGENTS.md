@@ -15,9 +15,14 @@ IMPORTANT: When invoking commands via conda, always use `conda run --no-capture-
 - Main evaluation entrypoint: `chirpe-evaluate --model-path outputs/run-name/best_model --data-dir data/synthetic --output-dir evaluation`
 - Fast config-driven training path: `python scripts/train/train_from_config.py --config configs/ultra_quick_config.yaml --data-dir data/synthetic --output-dir outputs/quick-run`
 - Export classifier-only ONNX to Triton layout: `python scripts/onnx/export_triton_onnx.py --model-dir outputs/run-name/best_model --triton-repo outputs/triton_model_repository --model-name chirpe_classifier --version 1 --max-batch-size 32 --opset 18`
+- Build fused string-input ONNX models: `python scripts/onnx/build_fused_string_onnx.py --checkpoint-root outputs/string_onnx_checkpoints --classifier-repo outputs/string_onnx_baseline_classifier --output-repo outputs/string_onnx_fused --report-root reports/fused_smoke`
 - Verify HF vs ONNX logit parity: `python scripts/validation/verify_onnx_parity.py --hf-model-dir outputs/run-name/best_model --onnx-model-path outputs/triton_model_repository/chirpe_classifier/1/model.onnx --report-file reports/baseline/bert.json`
 - Smoke test Triton ORT Extensions loading: `python scripts/validation/smoke_test_triton_ort_extensions.py --run-docker`
 - Benchmark Triton classifier serving baseline: `python scripts/validation/benchmark_triton_classifier_baseline.py --model-repo outputs/triton_model_repository --model-name chirpe_classifier --hf-model-dir outputs/run-name/best_model --report-file reports/perf/bert.json`
+- Validate fused string-input Triton models end-to-end: `python scripts/validation/integrate_fused_triton_models.py --model-repo outputs/string_onnx_fused --report-file reports/triton_fused_integration/summary.json`
+- Compare fused Triton logits/labels vs Python reference: `python scripts/validation/verify_fused_triton_parity.py --model-repo outputs/string_onnx_fused --checkpoints-root outputs/string_onnx_checkpoints --data-file data/synthetic/test.json --report-root reports/parity_fused`
+- Benchmark fused Triton string-input serving: `python scripts/validation/benchmark_triton_fused.py --model-repo outputs/string_onnx_fused --model-name chirpe_bert_string --baseline-report reports/perf/bert.json --report-file reports/perf_fused/bert.json`
+- Run fused Triton robustness suite: `python scripts/validation/robustness_fused_triton.py --model-repo outputs/string_onnx_fused --report-file reports/robustness_fused/summary.json`
 - Run tokenizer ONNX feasibility spike: `python scripts/experiments/tokenizer_onnx_feasibility_spike.py`
 - Do not rely on `python -m chirpe.cli` for normal use; `src/chirpe/cli.py` defaults to `train_cli()` when run directly.
 

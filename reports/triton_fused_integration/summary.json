@@ -1,0 +1,134 @@
+{
+  "status": "passed",
+  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
+  "model_names": [
+    "chirpe_bert_string",
+    "chirpe_clinicalbert_string",
+    "chirpe_mentalbert_string"
+  ],
+  "version": 1,
+  "triton_image": "nvcr.io/nvidia/tritonserver:24.10-py3",
+  "http_port": 8000,
+  "ortx_library_host_path": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so.0.15.0",
+  "ortx_library_container_path": "/opt/ortx/libortextensions.so",
+  "generated_models": [
+    {
+      "model_name": "chirpe_bert_string",
+      "model_path": "outputs/string_onnx_fused/chirpe_bert_string/1/model.onnx",
+      "config_path": "outputs/string_onnx_fused/chirpe_bert_string/config.pbtxt",
+      "input": {
+        "name": "text",
+        "type": "tensor(string)",
+        "shape": [
+          null
+        ]
+      },
+      "outputs": [
+        {
+          "name": "logits",
+          "type": "tensor(float)",
+          "shape": [
+            "batch_size",
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "model_name": "chirpe_clinicalbert_string",
+      "model_path": "outputs/string_onnx_fused/chirpe_clinicalbert_string/1/model.onnx",
+      "config_path": "outputs/string_onnx_fused/chirpe_clinicalbert_string/config.pbtxt",
+      "input": {
+        "name": "text",
+        "type": "tensor(string)",
+        "shape": [
+          null
+        ]
+      },
+      "outputs": [
+        {
+          "name": "logits",
+          "type": "tensor(float)",
+          "shape": [
+            "batch_size",
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "model_name": "chirpe_mentalbert_string",
+      "model_path": "outputs/string_onnx_fused/chirpe_mentalbert_string/1/model.onnx",
+      "config_path": "outputs/string_onnx_fused/chirpe_mentalbert_string/config.pbtxt",
+      "input": {
+        "name": "text",
+        "type": "tensor(string)",
+        "shape": [
+          null
+        ]
+      },
+      "outputs": [
+        {
+          "name": "logits",
+          "type": "tensor(float)",
+          "shape": [
+            "batch_size",
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "container_id": "07ab154c381d5f62382544fca7b1941bc22ccf0f591f673d9913e4e8f6bbda3d",
+  "server_ready": true,
+  "model_status": [
+    {
+      "model_name": "chirpe_bert_string",
+      "ready": true,
+      "infer": {
+        "ok": true,
+        "status_code": 200,
+        "output_name": "logits",
+        "output_shape": [
+          1,
+          2
+        ],
+        "output_datatype": "FP32",
+        "num_values": 2
+      }
+    },
+    {
+      "model_name": "chirpe_clinicalbert_string",
+      "ready": true,
+      "infer": {
+        "ok": true,
+        "status_code": 200,
+        "output_name": "logits",
+        "output_shape": [
+          1,
+          2
+        ],
+        "output_datatype": "FP32",
+        "num_values": 2
+      }
+    },
+    {
+      "model_name": "chirpe_mentalbert_string",
+      "ready": true,
+      "infer": {
+        "ok": true,
+        "status_code": 200,
+        "output_name": "logits",
+        "output_shape": [
+          1,
+          2
+        ],
+        "output_datatype": "FP32",
+        "num_values": 2
+      }
+    }
+  ],
+  "all_models_ready": true,
+  "all_models_infer_ok": true,
+  "container_logs_tail": "\n=============================\n== Triton Inference Server ==\n=============================\n\nNVIDIA Release 24.10 (build 117849258)\nTriton Server Version 2.51.0\n\nCopyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nVarious files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nThis container image and its contents are governed by the NVIDIA Deep Learning Container License.\nBy pulling and using the container, you accept the terms and conditions of this license:\nhttps://developer.nvidia.com/ngc/nvidia-deep-learning-container-license\n\nWARNING: The NVIDIA Driver was not detected.  GPU functionality will not be available.\n   Use the NVIDIA Container Toolkit to start this container with GPU support; see\n   https://docs.nvidia.com/datacenter/cloud-native/ .\n"
+}

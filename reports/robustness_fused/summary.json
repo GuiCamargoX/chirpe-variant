@@ -1,0 +1,305 @@
+{
+  "status": "passed",
+  "container_id": "2efa183af533e2ec87ca4c57e049c85f5d0a40763034cb2781540dc83f3e7904",
+  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
+  "model_names": [
+    "chirpe_bert_string",
+    "chirpe_clinicalbert_string",
+    "chirpe_mentalbert_string"
+  ],
+  "checks": [
+    {
+      "model_name": "chirpe_bert_string",
+      "status": "passed",
+      "valid_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "empty",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "whitespace",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "punctuation",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "unicode",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "long",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          }
+        ]
+      },
+      "malformed_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "missing_inputs",
+            "status_code": 500,
+            "ok": true,
+            "error": "{\"error\":\"Unable to parse 'inputs': attempt to access non-existing object member 'inputs'\"}"
+          },
+          {
+            "case": "wrong_input_name",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"unexpected inference input 'bad' for model 'chirpe_bert_string'\"}"
+          },
+          {
+            "case": "wrong_datatype",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] inference input 'text' data-type is 'INT64', but model 'chirpe_bert_string' expects 'BYTES'\"}"
+          },
+          {
+            "case": "shape_mismatch",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] expected 2 string elements for inference input 'text' for model 'chirpe_bert_string', got 1\"}"
+          }
+        ]
+      },
+      "concurrency": {
+        "ok": true,
+        "workers": 8,
+        "requests_per_worker": 20,
+        "total_requests": 160,
+        "successful_requests": 160,
+        "failed_requests": 0,
+        "failure_examples": []
+      }
+    },
+    {
+      "model_name": "chirpe_clinicalbert_string",
+      "status": "passed",
+      "valid_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "empty",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "whitespace",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "punctuation",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "unicode",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "long",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          }
+        ]
+      },
+      "malformed_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "missing_inputs",
+            "status_code": 500,
+            "ok": true,
+            "error": "{\"error\":\"Unable to parse 'inputs': attempt to access non-existing object member 'inputs'\"}"
+          },
+          {
+            "case": "wrong_input_name",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"unexpected inference input 'bad' for model 'chirpe_clinicalbert_string'\"}"
+          },
+          {
+            "case": "wrong_datatype",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] inference input 'text' data-type is 'INT64', but model 'chirpe_clinicalbert_string' expects 'BYTES'\"}"
+          },
+          {
+            "case": "shape_mismatch",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] expected 2 string elements for inference input 'text' for model 'chirpe_clinicalbert_string', got 1\"}"
+          }
+        ]
+      },
+      "concurrency": {
+        "ok": true,
+        "workers": 8,
+        "requests_per_worker": 20,
+        "total_requests": 160,
+        "successful_requests": 160,
+        "failed_requests": 0,
+        "failure_examples": []
+      }
+    },
+    {
+      "model_name": "chirpe_mentalbert_string",
+      "status": "passed",
+      "valid_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "empty",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "whitespace",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "punctuation",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "unicode",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          },
+          {
+            "case": "long",
+            "status_code": 200,
+            "ok": true,
+            "shape": [
+              1,
+              2
+            ],
+            "error": ""
+          }
+        ]
+      },
+      "malformed_cases": {
+        "ok": true,
+        "results": [
+          {
+            "case": "missing_inputs",
+            "status_code": 500,
+            "ok": true,
+            "error": "{\"error\":\"Unable to parse 'inputs': attempt to access non-existing object member 'inputs'\"}"
+          },
+          {
+            "case": "wrong_input_name",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"unexpected inference input 'bad' for model 'chirpe_mentalbert_string'\"}"
+          },
+          {
+            "case": "wrong_datatype",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] inference input 'text' data-type is 'INT64', but model 'chirpe_mentalbert_string' expects 'BYTES'\"}"
+          },
+          {
+            "case": "shape_mismatch",
+            "status_code": 400,
+            "ok": true,
+            "error": "{\"error\":\"[request id: <id_unknown>] expected 2 string elements for inference input 'text' for model 'chirpe_mentalbert_string', got 1\"}"
+          }
+        ]
+      },
+      "concurrency": {
+        "ok": true,
+        "workers": 8,
+        "requests_per_worker": 20,
+        "total_requests": 160,
+        "successful_requests": 160,
+        "failed_requests": 0,
+        "failure_examples": []
+      }
+    }
+  ],
+  "server_ready": true,
+  "container_logs_tail": "\n=============================\n== Triton Inference Server ==\n=============================\n\nNVIDIA Release 24.10 (build 117849258)\nTriton Server Version 2.51.0\n\nCopyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nVarious files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.\n\nThis container image and its contents are governed by the NVIDIA Deep Learning Container License.\nBy pulling and using the container, you accept the terms and conditions of this license:\nhttps://developer.nvidia.com/ngc/nvidia-deep-learning-container-license\n\nWARNING: The NVIDIA Driver was not detected.  GPU functionality will not be available.\n   Use the NVIDIA Container Toolkit to start this container with GPU support; see\n   https://docs.nvidia.com/datacenter/cloud-native/ .\n"
+}
