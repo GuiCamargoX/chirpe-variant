@@ -1,17 +1,17 @@
 {
   "backbone": "bert",
   "status": "passed",
-  "checkpoint_dir": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_checkpoints/bert/best_model",
-  "classifier_onnx_path": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_baseline_classifier/chirpe_bert_baseline/1/model.onnx",
+  "checkpoint_dir": "outputs/string_onnx_checkpoints/bert/best_model",
+  "classifier_onnx_path": "outputs/string_onnx_baseline_classifier/chirpe_bert_baseline/1/model.onnx",
   "fused_model_name": "chirpe_bert_string",
-  "fused_model_path": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused/chirpe_bert_string/1/model.onnx",
+  "fused_model_path": "outputs/string_onnx_fused/chirpe_bert_string/1/model.onnx",
   "ortx_library_path": "/home/guicamargo/miniconda3/envs/chirp/lib/python3.11/site-packages/onnxruntime_extensions/_extensions_pydll.cpython-311-x86_64-linux-gnu.so",
   "max_sequence_length": 128,
   "onnx_checker_passed": true,
   "ort_without_custom_ops": {
     "load_passed": false,
     "error_type": "Fail",
-    "error_message": "[ONNXRuntimeError] : 1 : FAIL : Load model from /media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused/chirpe_bert_string/1/model.onnx failed:Fatal error: ai.onnx.contrib:BertTokenizer(-1) is not a registered function/op"
+    "error_message": "[ONNXRuntimeError] : 1 : FAIL : Load model from outputs/string_onnx_fused/chirpe_bert_string/1/model.onnx failed:Fatal error: ai.onnx.contrib:BertTokenizer(-1) is not a registered function/op"
   },
   "ort_with_custom_ops_loaded": true,
   "smoke_inference_valid": true,
@@ -19,7 +19,16 @@
     1,
     2
   ],
-  "fused_metadata_path": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused/chirpe_bert_string/1/export_metadata.json",
+  "smoke_probabilities_shape": [
+    1,
+    2
+  ],
+  "smoke_label_shape": [
+    1
+  ],
+  "smoke_label_dtype": "int64",
+  "smoke_label_matches_argmax": true,
+  "fused_metadata_path": "outputs/string_onnx_fused/chirpe_bert_string/1/export_metadata.json",
   "inputs": [
     {
       "name": "text",
@@ -36,6 +45,21 @@
       "shape": [
         "batch_size",
         2
+      ]
+    },
+    {
+      "name": "probabilities",
+      "type": "tensor(float)",
+      "shape": [
+        "batch",
+        2
+      ]
+    },
+    {
+      "name": "label",
+      "type": "tensor(int64)",
+      "shape": [
+        "batch"
       ]
     }
   ]

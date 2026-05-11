@@ -14,6 +14,9 @@ import onnx.compose
 import onnxruntime as ort
 from onnx import TensorProto, helper, save
 from onnxruntime_extensions import gen_processing_models, get_library_path
+from onnxscript import FLOAT, INT64
+from onnxscript import opset18 as ops
+from onnxscript import script
 from transformers import AutoTokenizer
 
 
@@ -156,6 +159,59 @@ def build_adapter_model(
     return model, io_map_tok_to_adapter, io_map_adapter_to_classifier
 
 
+def build_postprocess_model(opset_version: int, ir_version: int) -> onnx.ModelProto:
+    """Build the Softmax+ArgMax post-processing sub-graph.
+
+    Input:
+        logits_in (FLOAT[batch, 2]): raw classifier logits.
+    Outputs:
+        probabilities (FLOAT[batch, 2]): Softmax(logits_in, axis=-1).
+        label (INT64[batch]): ArgMax(probabilities, axis=-1, keepdims=0).
+    """
+
+    @script()
+    def postprocess(logits_in: FLOAT["batch", 2]):  # type: ignore[name-defined]
+        probabilities = ops.Softmax(logits_in, axis=-1)
+        label = ops.ArgMax(probabilities, axis=-1, keepdims=0)
+        return probabilities, label
+
+    model = postprocess.to_model_proto()
+
+    # Force canonical output names regardless of onnxscript's naming choices.
+    desired_output_names = ["probabilities", "label"]
+    for index, target_name in enumerate(desired_output_names):
+        original_name = model.graph.output[index].name
+        if original_name == target_name:
+            continue
+        model.graph.output[index].name = target_name
+        for node in model.graph.node:
+            for j, output_name in enumerate(node.output):
+                if output_name == original_name:
+                    node.output[j] = target_name
+
+    desired_output_specs = [
+        (TensorProto.FLOAT, ["batch", 2]),
+        (TensorProto.INT64, ["batch"]),
+    ]
+    for output_proto, (desired_type, desired_shape) in zip(
+        model.graph.output, desired_output_specs
+    ):
+        output_proto.type.tensor_type.elem_type = desired_type
+        tensor_shape = output_proto.type.tensor_type.shape
+        del tensor_shape.dim[:]
+        for dim_value in desired_shape:
+            dim_proto = tensor_shape.dim.add()
+            if isinstance(dim_value, str):
+                dim_proto.dim_param = dim_value
+            else:
+                dim_proto.dim_value = int(dim_value)
+
+    del model.opset_import[:]
+    model.opset_import.append(helper.make_opsetid("", opset_version))
+    model.ir_version = ir_version
+    return model
+
+
 def infer_metadata(session: ort.InferenceSession) -> Dict:
     return {
         "inputs": [
@@ -274,6 +330,21 @@ def run_backbone(
     )
     fused_model.ir_version = classifier_model.ir_version
 
+    postprocess_model = build_postprocess_model(
+        opset_version=opset_version,
+        ir_version=classifier_model.ir_version,
+    )
+
+    fused_model = onnx.compose.merge_models(
+        fused_model,
+        postprocess_model,
+        io_map=[("logits", "logits_in")],
+        inputs=["text"],
+        outputs=["logits", "probabilities", "label"],
+        name=f"fused_string_classifier_postproc_{backbone}",
+    )
+    fused_model.ir_version = classifier_model.ir_version
+
     save(fused_model, str(fused_model_path))
     onnx.checker.check_model(fused_model)
     report["onnx_checker_passed"] = True
@@ -296,12 +367,27 @@ def run_backbone(
     )
     report["ort_with_custom_ops_loaded"] = True
 
-    smoke_logits = session.run(None, {"text": np.array([sample_text], dtype=object)})[0]
+    smoke_outputs = session.run(
+        ["logits", "probabilities", "label"],
+        {"text": np.array([sample_text], dtype=object)},
+    )
+    smoke_logits, smoke_probabilities, smoke_label = smoke_outputs
+
+    prob_row_sums = smoke_probabilities.sum(axis=-1)
+    label_matches_argmax = bool(
+        np.array_equal(smoke_label, np.argmax(smoke_probabilities, axis=-1))
+    )
     smoke_valid = bool(
         isinstance(smoke_logits, np.ndarray)
         and smoke_logits.ndim == 2
         and smoke_logits.shape[0] >= 1
         and np.isfinite(smoke_logits).all()
+        and smoke_probabilities.shape == smoke_logits.shape
+        and np.isfinite(smoke_probabilities).all()
+        and np.allclose(prob_row_sums, 1.0, atol=1e-5)
+        and smoke_label.dtype == np.int64
+        and smoke_label.shape == (smoke_logits.shape[0],)
+        and label_matches_argmax
     )
 
     io_metadata = infer_metadata(session)
@@ -320,6 +406,10 @@ def run_backbone(
         {
             "smoke_inference_valid": smoke_valid,
             "smoke_logits_shape": list(smoke_logits.shape),
+            "smoke_probabilities_shape": list(smoke_probabilities.shape),
+            "smoke_label_shape": list(smoke_label.shape),
+            "smoke_label_dtype": str(smoke_label.dtype),
+            "smoke_label_matches_argmax": label_matches_argmax,
             "fused_metadata_path": str(fused_metadata_path),
             "inputs": io_metadata["inputs"],
             "outputs": io_metadata["outputs"],

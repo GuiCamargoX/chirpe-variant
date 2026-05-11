@@ -19,6 +19,15 @@
     1,
     2
   ],
+  "smoke_probabilities_shape": [
+    1,
+    2
+  ],
+  "smoke_label_shape": [
+    1
+  ],
+  "smoke_label_dtype": "int64",
+  "smoke_label_matches_argmax": true,
   "fused_metadata_path": "outputs/string_onnx_fused/chirpe_mentalbert_string/1/export_metadata.json",
   "inputs": [
     {
@@ -36,6 +45,21 @@
       "shape": [
         "batch_size",
         2
+      ]
+    },
+    {
+      "name": "probabilities",
+      "type": "tensor(float)",
+      "shape": [
+        "batch",
+        2
+      ]
+    },
+    {
+      "name": "label",
+      "type": "tensor(int64)",
+      "shape": [
+        "batch"
       ]
     }
   ]

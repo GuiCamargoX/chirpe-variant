@@ -61,6 +61,7 @@ dependencies = [
     "bert-score>=0.3.13",
     "openai>=1.0.0",
     "anthropic>=0.21.0",
+    "onnxscript>=0.1.0",
 ]
 
 [project.optional-dependencies]
