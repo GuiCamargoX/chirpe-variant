@@ -3,9 +3,6 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
-> [!IMPORTANT]
-> **Unofficial Implementation**: This repository contains an unofficial implementation of the CHiRPE framework based on the paper. The official implementation can be found in a separate repository.
-
 CHiRPE is a human-centred NLP framework for predicting Clinical High-Risk for Psychosis (CHR-P) from semi-structured clinical interview transcripts. It integrates symptom domain segmentation, LLM summarisation, BERT-based classification, and clinician-friendly SHAP explanations.
 
 ## Overview 🔎
