@@ -110,7 +110,25 @@ python scripts/validation/verify_onnx_parity.py \
   --report-file outputs/triton_model_repository/chirpe_classifier/1/parity_report.json
 ```
 
-### 4. Direct ONNX conversion tutorial notebook
+### 4. Optional: Add transcript-level voting inside classifier ONNX
+
+When one ONNX request represents all segment tensors for one transcript, you can
+append transcript-level aggregation outputs to the classifier ONNX graph:
+
+```bash
+python scripts/onnx/add_transcript_voting_onnx.py \
+  --input-model outputs/triton_model_repository/chirpe_classifier/1/model.onnx \
+  --output-model outputs/transcript_voting/chirpe_classifier_voting.onnx \
+  --metadata-file outputs/transcript_voting/voting_metadata.json
+```
+
+The augmented model keeps `logits` and adds `segment_probabilities`,
+`segment_labels`, `transcript_probabilities`, `transcript_label_average`, and
+`transcript_label_majority`. This applies to classifier-only ONNX models with
+batched segment inputs, not to separate one-segment requests. If serving this
+augmented model with Triton, add the new outputs to the model `config.pbtxt`.
+
+### 5. Direct ONNX conversion tutorial notebook
 
 See `notebooks/02_convert_onnx_tutorial.ipynb` for a beginner-friendly step-by-step workflow that covers:
 
@@ -119,7 +137,7 @@ See `notebooks/02_convert_onnx_tutorial.ipynb` for a beginner-friendly step-by-s
 - merging tokenizer + classifier into a fused string-input ONNX model
 - running local fused inference with `onnxruntime`
 
-### 5. Start Triton Inference Server
+### 6. Start Triton Inference Server
 
 ```bash
 docker run --rm --net=host \
@@ -128,7 +146,7 @@ docker run --rm --net=host \
   tritonserver --model-repository=/models
 ```
 
-### 6. CHiRPE fused ONNX quickstart notebook
+### 7. CHiRPE fused ONNX quickstart notebook
 
 See `notebooks/03_quickstart_fused_onnx.ipynb` for a CHiRPE pipeline walkthrough:
 
@@ -137,9 +155,38 @@ See `notebooks/03_quickstart_fused_onnx.ipynb` for a CHiRPE pipeline walkthrough
 - fused ONNX inference on segment summaries
 - transcript-level majority/average voting
 
+### 8. Fixed-slot fused string ONNX with transcript voting
+
+For a single ONNX request containing all segment summaries for one transcript,
+build fixed-slot string-input models with tokenizer, classifier, and masked
+transcript voting in ONNX:
+
+```bash
+python scripts/onnx/build_fused_string_voting_onnx.py \
+  --checkpoint-root outputs/string_onnx_checkpoints \
+  --classifier-repo outputs/string_onnx_baseline_classifier \
+  --output-repo outputs/string_onnx_fused_voting \
+  --report-root reports/fused_voting_smoke \
+  --max-segments 15
+```
+
+The serving contract is one transcript per request:
+
+```python
+text = ["segment 1 summary", "segment 2 summary"] + [""] * 13
+segment_mask = [1.0, 1.0] + [0.0] * 13
+```
+
+The generated models output segment-level `logits`, `probabilities`, and
+`label`, plus `transcript_probabilities`, `transcript_label_average`, and
+`transcript_label_majority`. Padded slots are ignored by transcript aggregation
+through `segment_mask`.
+
 > [!IMPORTANT]
-> Triton serves classifier inference only (tokenized tensor inputs -> logits). Transcript preprocessing,
-> segmentation/summarisation, and segment-level voting remain in application code.
+> Raw transcript preprocessing, segmentation, and summarisation still remain in
+> application code. The fixed-slot fused voting model moves tokenizer,
+> classifier, and transcript-level aggregation into ONNX after segment summaries
+> have already been prepared.
 
 ## Project Structure
 

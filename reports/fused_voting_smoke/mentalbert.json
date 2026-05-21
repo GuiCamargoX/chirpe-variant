@@ -1,0 +1,93 @@
+{
+  "backbone": "mentalbert",
+  "status": "passed",
+  "checkpoint_dir": "outputs/string_onnx_checkpoints/mentalbert/best_model",
+  "classifier_onnx_path": "outputs/string_onnx_baseline_classifier/chirpe_mentalbert_baseline/1/model.onnx",
+  "fused_model_name": "chirpe_mentalbert_string_voting",
+  "fused_model_path": "outputs/string_onnx_fused_voting/chirpe_mentalbert_string_voting/1/model.onnx",
+  "max_segments": 15,
+  "onnx_checker_passed": true,
+  "smoke_inference_valid": true,
+  "max_sequence_length": 128,
+  "active_sample_segments": 2,
+  "logits_shape": [
+    15,
+    2
+  ],
+  "probabilities_shape": [
+    15,
+    2
+  ],
+  "label_shape": [
+    15
+  ],
+  "transcript_probabilities_shape": [
+    2
+  ],
+  "transcript_label_average": 1,
+  "transcript_label_majority": 1,
+  "metadata_path": "outputs/string_onnx_fused_voting/chirpe_mentalbert_string_voting/1/export_metadata.json",
+  "config_path": "outputs/string_onnx_fused_voting/chirpe_mentalbert_string_voting/config.pbtxt",
+  "inputs": [
+    {
+      "name": "text",
+      "type": "tensor(string)",
+      "shape": [
+        15
+      ]
+    },
+    {
+      "name": "segment_mask",
+      "type": "tensor(float)",
+      "shape": [
+        15
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "logits",
+      "type": "tensor(float)",
+      "shape": [
+        15,
+        2
+      ]
+    },
+    {
+      "name": "probabilities",
+      "type": "tensor(float)",
+      "shape": [
+        15,
+        2
+      ]
+    },
+    {
+      "name": "label",
+      "type": "tensor(int64)",
+      "shape": [
+        15
+      ]
+    },
+    {
+      "name": "transcript_probabilities",
+      "type": "tensor(float)",
+      "shape": [
+        2
+      ]
+    },
+    {
+      "name": "transcript_label_average",
+      "type": "tensor(int64)",
+      "shape": [
+        1
+      ]
+    },
+    {
+      "name": "transcript_label_majority",
+      "type": "tensor(int64)",
+      "shape": [
+        1
+      ]
+    }
+  ]
+}
