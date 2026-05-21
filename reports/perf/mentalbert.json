@@ -2,7 +2,7 @@
   "status": "passed",
   "model_name": "chirpe_mentalbert_baseline",
   "hf_model_dir": "outputs/string_onnx_checkpoints/mentalbert/best_model",
-  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_baseline_classifier",
+  "model_repo": "outputs/string_onnx_baseline_classifier",
   "triton_image": "nvcr.io/nvidia/tritonserver:24.10-py3",
   "http_port": 8000,
   "batch_sizes": [

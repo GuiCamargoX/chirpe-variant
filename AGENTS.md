@@ -37,6 +37,13 @@ IMPORTANT: When invoking commands via conda, always use `conda run --no-capture-
 - API-backed LLM paths in `src/chirpe/data/summarizer.py` and `src/chirpe/explanations/narrative.py` still use `openai.ChatCompletion.create` even though the repo depends on `openai>=1.0.0`; treat those code paths as likely stale before relying on them.
 - Avoid `import chirpe` in lightweight scripts or tests; `src/chirpe/__init__.py` eagerly imports the preprocessor, classifier, and SHAP explainer.
 
+## Public Repo Hygiene
+- Do not commit machine-specific absolute paths, usernames, home directories, conda paths, local mount paths, hostnames, or other local environment details.
+- When notebooks are executed, avoid printing full local paths in output cells. Prefer repo-relative paths or generic status messages.
+- Before finalizing notebook or report changes, search for local path leaks such as `/home/`, `/media/`, usernames, `miniconda3`, and full workspace paths.
+- Reports intended for version control should store repo-relative paths or placeholders, not resolved absolute paths.
+- Keep `data/` and `outputs/` as local artifacts; do not rely on their contents being available in the public repo.
+
 ## Architecture
 - `src/chirpe/data/`: JSON loading, PSYCHS-domain segmentation, summarization, preprocessing.
 - `src/chirpe/models/`: `CHRClassifier` and the Hugging Face `Trainer` wrapper in `ModelTrainer`.

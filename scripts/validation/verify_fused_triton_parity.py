@@ -27,6 +27,15 @@ BACKBONE_TO_MODEL = {
 }
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate parity between Triton fused models and Python reference",
@@ -357,9 +366,9 @@ def main() -> None:
     summary = {
         "status": "failed",
         "container_id": container_id,
-        "model_repo": str(args.model_repo.resolve()),
-        "checkpoints_root": str(args.checkpoints_root.resolve()),
-        "data_file": str(args.data_file.resolve()),
+        "model_repo": public_path(args.model_repo),
+        "checkpoints_root": public_path(args.checkpoints_root),
+        "data_file": public_path(args.data_file),
         "num_transcripts_input": len(transcripts),
         "reports": [],
     }

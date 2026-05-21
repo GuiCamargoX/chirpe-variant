@@ -1,7 +1,7 @@
 {
   "status": "passed",
   "model_name": "chirpe_clinicalbert_string",
-  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
+  "model_repo": "outputs/string_onnx_fused",
   "triton_image": "nvcr.io/nvidia/tritonserver:24.10-py3",
   "http_port": 8000,
   "batch_sizes": [

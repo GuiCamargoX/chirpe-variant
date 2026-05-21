@@ -16,6 +16,15 @@ from onnxruntime_extensions import gen_processing_models, get_library_path
 from transformers import AutoTokenizer
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build a tokenizer ONNX model and verify Triton can load ORT Extensions custom ops.",
@@ -124,12 +133,12 @@ instance_group [
     (model_root / "config.pbtxt").write_text(config_pbtxt)
 
     details = {
-        "model_repo": str(model_repo.resolve()),
+        "model_repo": public_path(model_repo),
         "model_name": model_name,
         "model_version": model_version,
         "hf_tokenizer": hf_tokenizer,
-        "onnx_path": str((version_dir / "model.onnx").resolve()),
-        "config_path": str((model_root / "config.pbtxt").resolve()),
+        "onnx_path": public_path(version_dir / "model.onnx"),
+        "config_path": public_path(model_root / "config.pbtxt"),
         "requires_custom_op_library": extension_library_container_path,
     }
     (model_root / "smoketest_metadata.json").write_text(json.dumps(details, indent=2))
@@ -234,10 +243,10 @@ def main() -> None:
 
     report = {
         "status": "prepared",
-        "model_repo": str(args.model_repo.resolve()),
-        "model_root": str(model_root.resolve()),
-        "version_dir": str(version_dir.resolve()),
-        "extension_library_host_path": str(extension_library_host_path.resolve()),
+        "model_repo": public_path(args.model_repo),
+        "model_root": public_path(model_root),
+        "version_dir": public_path(version_dir),
+        "extension_library_host_path": public_path(extension_library_host_path),
         "extension_library_container_path": extension_library_container_path,
     }
 

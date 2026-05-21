@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
+  "model_repo": "outputs/string_onnx_fused",
   "model_names": [
     "chirpe_bert_string",
     "chirpe_clinicalbert_string",
@@ -9,7 +9,7 @@
   "version": 1,
   "triton_image": "nvcr.io/nvidia/tritonserver:24.10-py3",
   "http_port": 8000,
-  "ortx_library_host_path": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so.0.15.0",
+  "ortx_library_host_path": "outputs/onnxruntime-extensions-src/build-shared/lib/libortextensions.so.0.15.0",
   "ortx_library_container_path": "/opt/ortx/libortextensions.so",
   "generated_models": [
     {

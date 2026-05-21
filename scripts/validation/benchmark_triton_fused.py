@@ -40,6 +40,15 @@ class MemorySample:
     peak_bytes: int = 0
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Benchmark fused Triton string-input model metrics",
@@ -336,7 +345,7 @@ def main() -> None:
     report: Dict = {
         "status": "failed",
         "model_name": args.model_name,
-        "model_repo": str(args.model_repo.resolve()),
+        "model_repo": public_path(args.model_repo),
         "triton_image": args.triton_image,
         "http_port": args.http_port,
         "batch_sizes": batch_sizes,

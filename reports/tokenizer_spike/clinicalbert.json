@@ -2,7 +2,7 @@
   "backbone": "clinicalbert",
   "model_dir": "outputs/string_onnx_checkpoints/clinicalbert/best_model",
   "onnx_model_path": "outputs/tokenizer_spike/clinicalbert/1/model.onnx",
-  "ortx_library_path": "/home/guicamargo/miniconda3/envs/chirp/lib/python3.11/site-packages/onnxruntime_extensions/_extensions_pydll.cpython-311-x86_64-linux-gnu.so",
+  "ortx_library_path": "<onnxruntime_extensions_library>",
   "versions": {
     "transformers": "4.57.6",
     "onnxruntime": "1.24.4"

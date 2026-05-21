@@ -34,6 +34,15 @@ ORT_TO_TRITON_DTYPE = {
 }
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Integrate fused string-input ONNX models with Triton",
@@ -270,12 +279,12 @@ def main() -> None:
 
     report: Dict = {
         "status": "failed",
-        "model_repo": str(args.model_repo.resolve()),
+        "model_repo": public_path(args.model_repo),
         "model_names": model_names,
         "version": args.version,
         "triton_image": args.triton_image,
         "http_port": args.http_port,
-        "ortx_library_host_path": str(ortx_library_host_path.resolve()),
+        "ortx_library_host_path": public_path(ortx_library_host_path),
         "ortx_library_container_path": args.ortx_library_container_path,
     }
 

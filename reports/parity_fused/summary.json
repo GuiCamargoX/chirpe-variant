@@ -1,9 +1,9 @@
 {
   "status": "passed",
   "container_id": "32d7cf565f430930941ea6859011ec546bdfc5916bb4cd4997def11ad3122e8f",
-  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
-  "checkpoints_root": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_checkpoints",
-  "data_file": "/media/guicamargo/Linux/Phd/chirpe-variant/data/synthetic/test.json",
+  "model_repo": "outputs/string_onnx_fused",
+  "checkpoints_root": "outputs/string_onnx_checkpoints",
+  "data_file": "data/synthetic/test.json",
   "num_transcripts_input": 20,
   "reports": [
     {

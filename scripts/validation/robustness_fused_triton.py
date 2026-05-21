@@ -15,6 +15,15 @@ from typing import Dict, List
 import requests
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Robustness checks for fused Triton string-input models",
@@ -257,7 +266,7 @@ def main() -> None:
     report: Dict = {
         "status": "failed",
         "container_id": container_id,
-        "model_repo": str(args.model_repo.resolve()),
+        "model_repo": public_path(args.model_repo),
         "model_names": model_names,
         "checks": [],
     }

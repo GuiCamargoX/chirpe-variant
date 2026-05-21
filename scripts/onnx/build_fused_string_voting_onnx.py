@@ -37,6 +37,15 @@ OUTPUT_NAMES = [
 ]
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build fixed-slot fused String-In ONNX models with transcript voting",
@@ -701,9 +710,9 @@ def run_backbone(
     metadata = {
         "backbone": backbone,
         "fused_model_name": fused_model_name,
-        "source_checkpoint_dir": str(checkpoint_dir),
-        "source_classifier_onnx_path": str(classifier_onnx_path),
-        "ortx_library_required": str(ortx_library_path),
+        "source_checkpoint_dir": public_path(checkpoint_dir),
+        "source_classifier_onnx_path": public_path(classifier_onnx_path),
+        "ortx_library_required": public_path(ortx_library_path),
         "max_segments": max_segments,
         "max_sequence_length": max_sequence_length,
         "contract": {

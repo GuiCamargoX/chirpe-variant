@@ -1,7 +1,7 @@
 {
   "status": "passed",
   "container_id": "2efa183af533e2ec87ca4c57e049c85f5d0a40763034cb2781540dc83f3e7904",
-  "model_repo": "/media/guicamargo/Linux/Phd/chirpe-variant/outputs/string_onnx_fused",
+  "model_repo": "outputs/string_onnx_fused",
   "model_names": [
     "chirpe_bert_string",
     "chirpe_clinicalbert_string",

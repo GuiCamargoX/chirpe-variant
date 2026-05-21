@@ -20,6 +20,15 @@ from onnxscript import script
 from transformers import AutoTokenizer
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build fused String-In ONNX models (tokenizer + classifier)",
@@ -260,11 +269,11 @@ def run_backbone(
     report: Dict = {
         "backbone": backbone,
         "status": "failed",
-        "checkpoint_dir": str(checkpoint_dir),
-        "classifier_onnx_path": str(classifier_onnx_path),
+        "checkpoint_dir": public_path(checkpoint_dir),
+        "classifier_onnx_path": public_path(classifier_onnx_path),
         "fused_model_name": fused_model_name,
-        "fused_model_path": str(fused_model_path),
-        "ortx_library_path": str(ortx_library_path),
+        "fused_model_path": public_path(fused_model_path),
+        "ortx_library_path": public_path(ortx_library_path),
     }
 
     if not checkpoint_dir.exists():
@@ -394,9 +403,9 @@ def run_backbone(
     metadata_payload = {
         "backbone": backbone,
         "fused_model_name": fused_model_name,
-        "source_checkpoint_dir": str(checkpoint_dir),
-        "source_classifier_onnx_path": str(classifier_onnx_path),
-        "ortx_library_required": str(ortx_library_path),
+        "source_checkpoint_dir": public_path(checkpoint_dir),
+        "source_classifier_onnx_path": public_path(classifier_onnx_path),
+        "ortx_library_required": public_path(ortx_library_path),
         "inputs": io_metadata["inputs"],
         "outputs": io_metadata["outputs"],
     }
@@ -410,7 +419,7 @@ def run_backbone(
             "smoke_label_shape": list(smoke_label.shape),
             "smoke_label_dtype": str(smoke_label.dtype),
             "smoke_label_matches_argmax": label_matches_argmax,
-            "fused_metadata_path": str(fused_metadata_path),
+            "fused_metadata_path": public_path(fused_metadata_path),
             "inputs": io_metadata["inputs"],
             "outputs": io_metadata["outputs"],
             "status": "passed" if smoke_valid else "failed",

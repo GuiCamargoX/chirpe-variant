@@ -17,6 +17,15 @@ from onnxruntime_extensions import gen_processing_models, get_library_path
 from transformers import AutoTokenizer
 
 
+def public_path(path: Path) -> str:
+    """Return a repo-relative path, or a placeholder for external local paths."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<external:{path.name}>"
+
+
 EDGE_CASES: List[Tuple[str, str]] = [
     ("empty", ""),
     ("whitespace", "   \t  "),
@@ -129,9 +138,9 @@ def run_backbone(
 
     report: Dict = {
         "backbone": backbone,
-        "model_dir": str(model_dir),
-        "onnx_model_path": str(model_path),
-        "ortx_library_path": str(ortx_library_path),
+        "model_dir": public_path(model_dir),
+        "onnx_model_path": public_path(model_path),
+        "ortx_library_path": public_path(ortx_library_path),
         "versions": {
             "transformers": transformers.__version__,
             "onnxruntime": ort.__version__,
