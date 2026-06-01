@@ -261,17 +261,25 @@ def predict_cli():
         seg_threshold = config.get("preprocessing", {}).get("segmentation_threshold", 0.8)
         # LLM summarization is opt-in and configuration-driven. Defaults favor
         # simple summarization for deterministic and lightweight CLI behavior.
-        use_llm = False
-        if config.get("llm", {}).get("use_api", False):
-            use_llm = True
-        elif config.get("ultra_quick", {}).get("use_simple_summarizer_fallback", True):
-            use_llm = False
+        llm_config = config.get("llm", {})
+        use_llm = llm_config.get("use_llm_summarizer", False)
+        llm_model_name = llm_config.get("model_name")
+        summarizer_backend = llm_config.get("backend", "hf")
 
         preprocessor = TranscriptPreprocessor(
             segmentation_threshold=seg_threshold,
             use_llm_summarizer=use_llm,
+            llm_model_name=llm_model_name,
+            summarizer_backend=summarizer_backend,
+            phi3_model_dir=llm_config.get("phi3_model_dir"),
+            phi3_download_root=llm_config.get("phi3_download_root"),
+            phi3_max_new_tokens=llm_config.get("phi3_max_new_tokens", 64),
+            phi3_download=llm_config.get("phi3_download", False),
         )
-        logger.info(f"Using segmentation_threshold={seg_threshold}, use_llm_summarizer={use_llm}")
+        logger.info(
+            f"Using segmentation_threshold={seg_threshold}, use_llm_summarizer={use_llm}, "
+            f"summarizer_backend={summarizer_backend}"
+        )
 
         result = preprocessor.process_transcript(
             input_data["transcript"],

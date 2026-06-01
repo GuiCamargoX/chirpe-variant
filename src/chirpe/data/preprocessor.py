@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from chirpe.data.segmentation import Segment, SymptomSegmenter
-from chirpe.data.summarizer import SegmentSummarizer, SimpleSummarizer
+from chirpe.data.summarizer import (
+    Phi3OnnxSummarizer,
+    SegmentSummarizer,
+    SimpleSummarizer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,32 +27,50 @@ class TranscriptPreprocessor:
         segmentation_threshold: float = 0.80,
         use_llm_summarizer: bool = False,
         llm_model_name: Optional[str] = None,
-        use_api: bool = False,
-        api_key: Optional[str] = None,
+        summarizer_backend: str = "hf",
+        phi3_model_dir: Optional[str] = None,
+        phi3_download_root: Optional[str] = None,
+        phi3_max_new_tokens: int = 64,
+        phi3_download: bool = False,
     ):
         """Initialize the preprocessor.
 
         Args:
             segmentation_threshold: Threshold for fuzzy matching
-            use_llm_summarizer: Whether to use LLM for summarization
-            llm_model_name: Model name for LLM summarizer
-            use_api: Whether to use API-based LLM
-            api_key: API key for LLM
+            use_llm_summarizer: Whether to use an LLM for summarization. When
+                False, the deterministic ``SimpleSummarizer`` is used.
+            llm_model_name: Model name for the HuggingFace ``SegmentSummarizer``
+                (used when ``summarizer_backend == "hf"``).
+            summarizer_backend: Which LLM backend to use when
+                ``use_llm_summarizer`` is True: ``"hf"`` for a local
+                HuggingFace causal LM, or ``"phi3_onnx"`` for the local Phi-3
+                ONNX Runtime GenAI summarizer.
+            phi3_model_dir: Explicit ONNX GenAI model directory for the Phi-3
+                backend (overrides ``phi3_download_root``).
+            phi3_download_root: Root directory the Phi-3 ONNX model is loaded
+                from / downloaded into.
+            phi3_max_new_tokens: Max new tokens per segment for the Phi-3 backend.
+            phi3_download: Whether to download the Phi-3 ONNX model if missing.
         """
         self.segmenter = SymptomSegmenter(threshold=segmentation_threshold)
 
-        if use_llm_summarizer and llm_model_name:
+        if use_llm_summarizer and summarizer_backend == "phi3_onnx":
+            self.summarizer = Phi3OnnxSummarizer(
+                model_dir=phi3_model_dir,
+                download_root=phi3_download_root,
+                max_new_tokens=phi3_max_new_tokens,
+                download=phi3_download,
+            )
+        elif use_llm_summarizer and llm_model_name:
             self.summarizer = SegmentSummarizer(
                 model_name=llm_model_name,
-                use_api=use_api,
-                api_key=api_key,
             )
         else:
             self.summarizer = SimpleSummarizer()
 
         logger.info(
-            f"Initialized TranscriptPreprocessor with "
-            f"{'LLM' if use_llm_summarizer else 'simple'} summarizer"
+            "Initialized TranscriptPreprocessor with %s summarizer",
+            type(self.summarizer).__name__,
         )
 
     def process_transcript(

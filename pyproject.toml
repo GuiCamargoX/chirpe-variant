@@ -65,6 +65,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+onnx-llm = [
+    "onnxruntime-genai>=0.4.0",
+    "huggingface-hub>=0.20.0",
+]
 dev = [
     "pytest>=7.3.0",
     "pytest-cov>=4.1.0",

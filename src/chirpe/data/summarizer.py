@@ -2,6 +2,7 @@
 
 import logging
 import re
+from pathlib import Path
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -23,32 +24,25 @@ Improved summary:"""
 
 
 class SegmentSummarizer:
-    """Summarize interview segments using either local or API-backed LLMs."""
+    """Summarize interview segments using a local HuggingFace causal LM."""
 
     def __init__(
         self,
         model_name: str = "mistralai/Mistral-7B-Instruct-v0.3",
-        use_api: bool = False,
-        api_key: Optional[str] = None,
         device: str = "auto",
     ):
         """Initialize the summarizer.
 
         Args:
-            model_name: HuggingFace model name or "openai" for GPT
-            use_api: Whether to use API-based model
-            api_key: API key for OpenAI/Anthropic
+            model_name: HuggingFace model name
             device: Device to load model on
         """
         self.model_name = model_name
-        self.use_api = use_api
-        self.api_key = api_key
         self.device = device
         self.model = None
         self.tokenizer = None
 
-        if not use_api:
-            self._load_local_model()
+        self._load_local_model()
 
     def _load_local_model(self):
         """Load a local causal LM and text-generation pipeline."""
@@ -109,30 +103,6 @@ class SegmentSummarizer:
         )
         return outputs[0]["generated_text"].strip()
 
-    def _generate_api(self, prompt: str, max_length: int = 512) -> str:
-        """Generate text via API-backed models.
-
-        Note:
-            This path currently uses the legacy `openai.ChatCompletion.create`
-            interface.
-        """
-        if "openai" in self.model_name.lower():
-            import openai
-
-            openai.api_key = self.api_key
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert clinical interviewer."},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=max_length,
-                temperature=0.7,
-            )
-            return response.choices[0].message.content
-        else:
-            raise ValueError(f"Unsupported API model: {self.model_name}")
-
     def summarize_segment(self, segment_text: str) -> str:
         """Summarize a segment using two-pass approach.
 
@@ -142,12 +112,6 @@ class SegmentSummarizer:
         Returns:
             One-paragraph third-person summary.
         """
-        if self.use_api:
-            # Simplified single-pass for API
-            prompt = FIRST_PASS_PROMPT.format(segment=segment_text)
-            summary = self._generate_api(prompt)
-            return summary
-
         # First pass: produce a faithful draft.
         first_prompt = FIRST_PASS_PROMPT.format(segment=segment_text)
         draft = self._generate_local(first_prompt)
@@ -219,6 +183,172 @@ class SimpleSummarizer:
             content = " ".join(content.split()[:100]) + "..."
 
         return content
+
+    def summarize_segments(self, segments: List["Segment"]) -> List[str]:
+        """Summarize multiple segments.
+
+        Args:
+            segments: List of Segment objects
+
+        Returns:
+            List of summaries
+        """
+        return [self.summarize_segment(s.get_text()) for s in segments]
+
+
+# Instruction used to steer the Phi-3 ONNX summarizer toward short, clinically
+# focused, third-person summaries suitable as classifier input.
+PHI3_INSTRUCTION = (
+    "Summarize the clinical interview segment in exactly 2 concise sentences. "
+    "Focus on symptoms, functional impact, and risk-relevant details. "
+    "Return only the summary text and do not repeat yourself."
+)
+
+
+class Phi3OnnxSummarizer:
+    """Summarize interview segments with a local Phi-3 ONNX Runtime GenAI model.
+
+    Wraps the CPU int4 ONNX build of ``microsoft/Phi-3-mini-4k-instruct-onnx``
+    via ``onnxruntime-genai``. The model is loaded once and reused across all
+    segments; each segment is summarized with a fresh generator.
+    """
+
+    MODEL_ID = "microsoft/Phi-3-mini-4k-instruct-onnx"
+    MODEL_SUBDIR = "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4"
+    DEFAULT_DOWNLOAD_ROOT = Path("outputs/local_onnx_llm/phi3-mini-4k-instruct-onnx")
+
+    def __init__(
+        self,
+        model_dir: Optional[str] = None,
+        download_root: Optional[str] = None,
+        max_new_tokens: int = 64,
+        download: bool = False,
+    ):
+        """Initialize the Phi-3 ONNX summarizer.
+
+        Args:
+            model_dir: Path to a directory containing the ONNX GenAI model
+                (the folder with ``genai_config.json``). If given, it is used
+                directly and ``download_root``/``download`` are ignored.
+            download_root: Root directory the model is downloaded into / loaded
+                from. Defaults to ``outputs/local_onnx_llm/phi3-mini-4k-instruct-onnx``.
+                The model is expected under ``<download_root>/<MODEL_SUBDIR>``.
+            max_new_tokens: Maximum number of new tokens to generate per segment.
+            download: Whether to fetch the model from the Hugging Face Hub if it
+                is not already present.
+        """
+        self.max_new_tokens = max_new_tokens
+        self._og = self._require_genai()
+
+        resolved_dir = self._resolve_model_dir(model_dir, download_root, download)
+        logger.info(f"Loading Phi-3 ONNX summarizer from {resolved_dir}")
+        self.model = self._og.Model(str(resolved_dir))
+        self.tokenizer = self._og.Tokenizer(self.model)
+        logger.info("Phi-3 ONNX summarizer loaded successfully")
+
+    @staticmethod
+    def _require_genai():
+        """Import onnxruntime-genai with a helpful error if it is missing."""
+        try:
+            import onnxruntime_genai as og
+        except ImportError as exc:
+            raise ImportError(
+                "Missing dependency: onnxruntime-genai. Install with: "
+                "python -m pip install onnxruntime-genai"
+            ) from exc
+        return og
+
+    @classmethod
+    def _resolve_model_dir(
+        cls,
+        model_dir: Optional[str],
+        download_root: Optional[str],
+        download: bool,
+    ) -> Path:
+        """Resolve (and optionally download) the ONNX GenAI model directory."""
+        if model_dir is not None:
+            path = Path(model_dir)
+            if not path.exists():
+                raise FileNotFoundError(f"Phi-3 ONNX model directory not found: {path}")
+            return path
+
+        root = Path(download_root) if download_root else cls.DEFAULT_DOWNLOAD_ROOT
+        target = root / cls.MODEL_SUBDIR
+        if not target.exists():
+            if not download:
+                raise FileNotFoundError(
+                    f"Phi-3 ONNX model not found at {target}. Pass download=True "
+                    "to fetch it from the Hugging Face Hub, or set model_dir."
+                )
+            from huggingface_hub import snapshot_download
+
+            root.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Downloading {cls.MODEL_ID} ({cls.MODEL_SUBDIR}) to {root}")
+            snapshot_download(
+                repo_id=cls.MODEL_ID,
+                allow_patterns=[f"{cls.MODEL_SUBDIR}/*"],
+                local_dir=root,
+            )
+        return target
+
+    # Markers that signal the model has stopped summarizing and started
+    # hallucinating a continuation (chat-template turns, a new transcript, or a
+    # fresh paragraph/section after the requested short summary).
+    _STOP_MARKERS = (
+        "<|end|>",
+        "<|user|>",
+        "<|assistant|>",
+        "\nInterviewer:",
+        "\nInterviewee:",
+        "\n\n",
+    )
+
+    @staticmethod
+    def _build_prompt(text: str) -> str:
+        """Wrap segment text in the Phi-3 chat template with the summary instruction."""
+        return f"<|user|>\n{PHI3_INSTRUCTION}\n\nSegment:\n{text}<|end|>\n<|assistant|>"
+
+    @classmethod
+    def _clean_output(cls, text: str) -> str:
+        """Trim generation at the first stop marker and strip surrounding whitespace."""
+        cut = len(text)
+        for marker in cls._STOP_MARKERS:
+            idx = text.find(marker)
+            if idx != -1:
+                cut = min(cut, idx)
+        return text[:cut].strip()
+
+    def summarize_segment(self, segment_text: str) -> str:
+        """Summarize a single segment with the Phi-3 ONNX model.
+
+        Args:
+            segment_text: The text to summarize
+
+        Returns:
+            Short third-person clinical summary.
+        """
+        og = self._og
+        prompt = self._build_prompt(segment_text)
+        input_tokens = self.tokenizer.encode(prompt)
+
+        params = og.GeneratorParams(self.model)
+        params.set_search_options(
+            max_length=len(input_tokens) + self.max_new_tokens,
+            batch_size=1,
+        )
+        generator = og.Generator(self.model, params)
+        generator.append_tokens(input_tokens)
+
+        # Fresh decode stream per segment so detokenization state never leaks
+        # between segments.
+        stream = self.tokenizer.create_stream()
+        generated = []
+        while not generator.is_done():
+            generator.generate_next_token()
+            next_token = int(generator.get_next_tokens()[0])
+            generated.append(stream.decode(next_token))
+
+        return self._clean_output("".join(generated))
 
     def summarize_segments(self, segments: List["Segment"]) -> List[str]:
         """Summarize multiple segments.

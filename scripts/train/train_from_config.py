@@ -112,11 +112,26 @@ def main():
     print("Preprocessing...")
     print("="*70)
 
-    # Check if using Gemma
+    # Select summarization backend
     llm_config = config.get("llm", {})
+    summarizer_backend = llm_config.get("backend", "hf")
     use_gemma = llm_config.get("model_name", "").startswith("google/gemma")
 
-    if use_gemma:
+    llm_model = None
+    llm_tokenizer = None
+
+    if llm_config.get("use_llm_summarizer", False) and summarizer_backend == "phi3_onnx":
+        print("Using Phi-3 ONNX for LLM summarization")
+        preprocessor = TranscriptPreprocessor(
+            segmentation_threshold=config["preprocessing"]["segmentation_threshold"],
+            use_llm_summarizer=True,
+            summarizer_backend="phi3_onnx",
+            phi3_model_dir=llm_config.get("phi3_model_dir"),
+            phi3_download_root=llm_config.get("phi3_download_root"),
+            phi3_max_new_tokens=llm_config.get("phi3_max_new_tokens", 64),
+            phi3_download=llm_config.get("phi3_download", False),
+        )
+    elif use_gemma:
         print("Using Gemma for LLM summarization")
         from transformers import AutoModelForCausalLM, AutoTokenizer as LLMTokenizer
 
@@ -138,7 +153,6 @@ def main():
             segmentation_threshold=config["preprocessing"]["segmentation_threshold"],
             use_llm_summarizer=True,
             llm_model_name=llm_model_name,
-            use_api=False,
         )
     else:
         print("Using simple summarizer")
@@ -146,8 +160,6 @@ def main():
             segmentation_threshold=config["preprocessing"]["segmentation_threshold"],
             use_llm_summarizer=False,
         )
-        llm_model = None
-        llm_tokenizer = None
 
     # Process data
     from chirpe.data.segmentation import SymptomSegmenter

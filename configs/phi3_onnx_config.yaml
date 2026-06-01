@@ -1,0 +1,35 @@
+# Example config using the local Phi-3 ONNX summarizer for segment summarization.
+#
+# Requires the onnx-llm extra:  pip install -e ".[onnx-llm]"
+# The model is fetched into outputs/local_onnx_llm/ on first use when
+# phi3_download is true (or pre-download it with
+# scripts/experiments/phi3_onnx_test.py --download).
+
+model:
+  model_name: "bert-base-uncased"
+  num_labels: 2
+  max_length: 256
+
+preprocessing:
+  segmentation_threshold: 0.80
+  max_segments_per_transcript: 3
+
+training:
+  num_epochs: 3
+  batch_size: 8
+  learning_rate: 2.0e-5
+
+data:
+  max_train_samples: null
+  max_val_samples: null
+  max_test_samples: null
+
+llm:
+  # Use the local Phi-3 ONNX Runtime GenAI summarizer (CPU int4).
+  use_llm_summarizer: true
+  backend: "phi3_onnx"
+  # Leave phi3_model_dir null to resolve from phi3_download_root/<MODEL_SUBDIR>.
+  phi3_model_dir: null
+  phi3_download_root: "outputs/local_onnx_llm/phi3-mini-4k-instruct-onnx"
+  phi3_max_new_tokens: 64
+  phi3_download: true

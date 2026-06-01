@@ -61,7 +61,7 @@ preprocessing:
 llm:
   # Gemma configuration for summarization
   model_name: "google/gemma-2b-it"
-  use_api: false
+  use_llm_summarizer: false
   device: "auto"
   max_new_tokens: 100
   temperature: 0.0
