@@ -4,7 +4,7 @@
 The input model is expected to emit segment-level logits with shape
 `[num_segments, num_labels]`. The generated model keeps existing outputs and
 adds ONNX-native post-processing outputs for per-segment probabilities/labels
-and transcript-level average/majority aggregation.
+and transcript-level average-probability aggregation.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ SEGMENT_PROBABILITIES = "segment_probabilities"
 SEGMENT_LABELS = "segment_labels"
 TRANSCRIPT_PROBABILITIES = "transcript_probabilities"
 TRANSCRIPT_LABEL_AVERAGE = "transcript_label_average"
-TRANSCRIPT_LABEL_MAJORITY = "transcript_label_majority"
 
 
 def parse_args() -> argparse.Namespace:
@@ -120,8 +119,6 @@ def add_transcript_voting_outputs(
     """Append ONNX-native segment and transcript aggregation outputs.
 
     Average aggregation computes `ArgMax(ReduceMean(Softmax(logits)))`.
-    Majority aggregation computes a binary majority vote over segment labels,
-    with ties assigned to class 0 to match NumPy `bincount(...).argmax()`.
     """
     opset = get_default_opset(model)
     if opset < 13:
@@ -133,20 +130,15 @@ def add_transcript_voting_outputs(
         SEGMENT_LABELS,
         TRANSCRIPT_PROBABILITIES,
         TRANSCRIPT_LABEL_AVERAGE,
-        TRANSCRIPT_LABEL_MAJORITY,
     ]
     ensure_names_available(model, added_outputs)
 
     num_labels = infer_num_labels(model, logits_output_name)
 
     axes_zero_name = "chirpe_voting_axes_zero"
-    gather_zero_name = "chirpe_voting_gather_zero"
-    two_name = "chirpe_voting_two"
     model.graph.initializer.extend(
         [
             make_initializer(axes_zero_name, [1], [0]),
-            make_initializer(gather_zero_name, [], [0]),
-            make_initializer(two_name, [], [2]),
         ]
     )
 
@@ -182,51 +174,6 @@ def add_transcript_voting_outputs(
                 axis=0,
                 keepdims=1,
             ),
-            helper.make_node(
-                "ReduceSum",
-                [SEGMENT_LABELS, axes_zero_name],
-                ["chirpe_majority_positive_count"],
-                name="ChirpeMajorityPositiveCount",
-                keepdims=0,
-            ),
-            helper.make_node(
-                "Shape",
-                [SEGMENT_LABELS],
-                ["chirpe_majority_label_shape"],
-                name="ChirpeMajorityLabelShape",
-            ),
-            helper.make_node(
-                "Gather",
-                ["chirpe_majority_label_shape", gather_zero_name],
-                ["chirpe_majority_num_segments"],
-                name="ChirpeMajorityNumSegments",
-                axis=0,
-            ),
-            helper.make_node(
-                "Mul",
-                ["chirpe_majority_positive_count", two_name],
-                ["chirpe_majority_positive_count_x2"],
-                name="ChirpeMajorityPositiveCountX2",
-            ),
-            helper.make_node(
-                "Greater",
-                ["chirpe_majority_positive_count_x2", "chirpe_majority_num_segments"],
-                ["chirpe_majority_bool"],
-                name="ChirpeMajorityGreaterThanHalf",
-            ),
-            helper.make_node(
-                "Cast",
-                ["chirpe_majority_bool"],
-                ["chirpe_majority_label_scalar"],
-                name="ChirpeMajorityCastLabel",
-                to=TensorProto.INT64,
-            ),
-            helper.make_node(
-                "Unsqueeze",
-                ["chirpe_majority_label_scalar", axes_zero_name],
-                [TRANSCRIPT_LABEL_MAJORITY],
-                name="ChirpeMajorityUnsqueezeLabel",
-            ),
         ]
     )
 
@@ -244,7 +191,6 @@ def add_transcript_voting_outputs(
                 [num_labels],
             ),
             helper.make_tensor_value_info(TRANSCRIPT_LABEL_AVERAGE, TensorProto.INT64, [1]),
-            helper.make_tensor_value_info(TRANSCRIPT_LABEL_MAJORITY, TensorProto.INT64, [1]),
         ]
     )
 
@@ -267,7 +213,6 @@ def metadata_payload(
             SEGMENT_LABELS: "ArgMax over segment probabilities; shape [num_segments].",
             TRANSCRIPT_PROBABILITIES: "Mean segment probabilities; shape [num_labels].",
             TRANSCRIPT_LABEL_AVERAGE: "ArgMax over transcript_probabilities; shape [1].",
-            TRANSCRIPT_LABEL_MAJORITY: "Binary majority vote over segment_labels; ties map to 0; shape [1].",
         },
         "aggregation_scope": "One ONNX invocation represents one transcript's segment batch.",
     }

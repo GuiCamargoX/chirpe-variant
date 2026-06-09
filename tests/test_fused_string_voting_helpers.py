@@ -47,4 +47,4 @@ def test_numpy_voting_reference_ignores_masked_slots():
     expected_transcript_probs = active_probs.mean(axis=0)
 
     assert np.allclose(reference["transcript_probabilities"], expected_transcript_probs)
-    assert reference["transcript_label_majority"] == 0
+    assert reference["transcript_label_average"] == int(expected_transcript_probs.argmax())

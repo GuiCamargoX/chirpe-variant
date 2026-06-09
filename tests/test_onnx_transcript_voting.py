@@ -12,7 +12,6 @@ from scripts.onnx.add_transcript_voting_onnx import (
     SEGMENT_LABELS,
     SEGMENT_PROBABILITIES,
     TRANSCRIPT_LABEL_AVERAGE,
-    TRANSCRIPT_LABEL_MAJORITY,
     TRANSCRIPT_PROBABILITIES,
     add_transcript_voting_outputs,
 )
@@ -49,14 +48,13 @@ def run_augmented_model(logits):
             SEGMENT_LABELS,
             TRANSCRIPT_PROBABILITIES,
             TRANSCRIPT_LABEL_AVERAGE,
-            TRANSCRIPT_LABEL_MAJORITY,
         ],
         {"input_logits": np.asarray(logits, dtype=np.float32)},
     )
 
 
 def test_transcript_voting_outputs_match_numpy_reference():
-    """Average and majority outputs should match NumPy references."""
+    """Average-probability outputs should match NumPy references."""
     logits = np.array(
         [
             [0.0, 2.0],
@@ -67,7 +65,7 @@ def test_transcript_voting_outputs_match_numpy_reference():
     )
 
     outputs = run_augmented_model(logits)
-    _, segment_probs, segment_labels, transcript_probs, average_label, majority_label = outputs
+    _, segment_probs, segment_labels, transcript_probs, average_label = outputs
 
     exp = np.exp(logits - logits.max(axis=-1, keepdims=True))
     expected_probs = exp / exp.sum(axis=-1, keepdims=True)
@@ -78,11 +76,10 @@ def test_transcript_voting_outputs_match_numpy_reference():
     assert np.array_equal(segment_labels, expected_segment_labels)
     assert np.allclose(transcript_probs, expected_transcript_probs, atol=1e-6)
     assert int(average_label[0]) == int(expected_transcript_probs.argmax())
-    assert int(majority_label[0]) == 1
 
 
-def test_majority_vote_tie_maps_to_zero():
-    """Binary majority voting should match np.bincount(...).argmax() tie behavior."""
+def test_average_vote_tie_maps_to_zero():
+    """Average probability ties should map to class 0 (numpy argmax behavior)."""
     logits = np.array(
         [
             [0.0, 2.0],
@@ -92,8 +89,6 @@ def test_majority_vote_tie_maps_to_zero():
     )
 
     outputs = run_augmented_model(logits)
-    average_label = outputs[-2]
-    majority_label = outputs[-1]
+    average_label = outputs[-1]
 
     assert int(average_label[0]) == 0
-    assert int(majority_label[0]) == 0

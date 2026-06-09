@@ -120,16 +120,14 @@ class CHRClassifier:
             return predictions, probs
         return predictions
 
-    def predict_with_segments(
-        self, segments: List[Dict], voting: str = "majority"
-    ) -> Dict:
-        """Predict from multiple segments with voting.
+    def predict_with_segments(self, segments: List[Dict]) -> Dict:
+        """Predict from multiple segments via average probability vote.
+
+        The transcript-level label is the argmax over the mean of the
+        per-segment class probabilities.
 
         Args:
             segments: List of segment dictionaries with `summary` keys.
-            voting: Transcript-level aggregation strategy:
-                - `majority`: majority vote over segment predictions
-                - `average`: argmax over mean segment probabilities
 
         Returns:
             Dictionary containing transcript prediction and per-segment outputs.
@@ -137,13 +135,8 @@ class CHRClassifier:
         summaries = [seg["summary"] for seg in segments]
         predictions, probs = self.predict(summaries, return_probs=True)
 
-        if voting == "majority":
-            final_pred = int(np.bincount(predictions).argmax())
-        elif voting == "average":
-            avg_probs = np.mean(probs, axis=0)
-            final_pred = int(np.argmax(avg_probs))
-        else:
-            raise ValueError(f"Unknown voting strategy: {voting}")
+        avg_probs = np.mean(probs, axis=0)
+        final_pred = int(np.argmax(avg_probs))
 
         return {
             "prediction": final_pred,

@@ -8,7 +8,7 @@ The generated graph accepts one transcript per request as:
 
 Each text slot is tokenized inside ONNX, padded/truncated to a fixed sequence
 length, stacked into a segment batch, classified, and then aggregated with
-masked transcript-level average and majority voting.
+masked transcript-level average-probability voting.
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ OUTPUT_NAMES = [
     "label",
     "transcript_probabilities",
     "transcript_label_average",
-    "transcript_label_majority",
 ]
 
 
@@ -304,13 +303,11 @@ def add_postprocess_nodes(
 ) -> None:
     axes_zero = "voting_axes_zero"
     axes_one = "voting_axes_one"
-    two_int = "voting_two_int"
     eps_float = "voting_eps_float"
     initializers.extend(
         [
             int64_initializer(axes_zero, [1], [0]),
             int64_initializer(axes_one, [1], [1]),
-            int64_initializer(two_int, [], [2]),
             float_initializer(eps_float, [], [1e-6]),
         ]
     )
@@ -377,58 +374,6 @@ def add_postprocess_nodes(
                 name="VotingTranscriptAverageLabel",
                 axis=0,
                 keepdims=1,
-            ),
-            helper.make_node(
-                "Cast",
-                ["segment_mask"],
-                ["segment_mask_int"],
-                name="VotingMaskCastInt",
-                to=TensorProto.INT64,
-            ),
-            helper.make_node(
-                "Mul",
-                ["label", "segment_mask_int"],
-                ["masked_labels"],
-                name="VotingMaskedLabels",
-            ),
-            helper.make_node(
-                "ReduceSum",
-                ["masked_labels", axes_zero],
-                ["positive_vote_count"],
-                name="VotingPositiveCount",
-                keepdims=0,
-            ),
-            helper.make_node(
-                "ReduceSum",
-                ["segment_mask_int", axes_zero],
-                ["active_segment_count"],
-                name="VotingActiveSegmentCount",
-                keepdims=0,
-            ),
-            helper.make_node(
-                "Mul",
-                ["positive_vote_count", two_int],
-                ["positive_vote_count_x2"],
-                name="VotingPositiveCountX2",
-            ),
-            helper.make_node(
-                "Greater",
-                ["positive_vote_count_x2", "active_segment_count"],
-                ["majority_bool"],
-                name="VotingMajorityGreaterThanHalf",
-            ),
-            helper.make_node(
-                "Cast",
-                ["majority_bool"],
-                ["majority_label_scalar"],
-                name="VotingMajorityCastInt",
-                to=TensorProto.INT64,
-            ),
-            helper.make_node(
-                "Unsqueeze",
-                ["majority_label_scalar", axes_zero],
-                ["transcript_label_majority"],
-                name="VotingMajorityLabel",
             ),
         ]
     )
@@ -505,7 +450,6 @@ def build_fused_voting_model(
                 "transcript_probabilities", TensorProto.FLOAT, [num_labels]
             ),
             helper.make_tensor_value_info("transcript_label_average", TensorProto.INT64, [1]),
-            helper.make_tensor_value_info("transcript_label_majority", TensorProto.INT64, [1]),
         ],
         initializer=initializers,
         value_info=copy.deepcopy(classifier_model.graph.value_info),
@@ -541,15 +485,11 @@ def numpy_voting_reference(logits: np.ndarray, segment_mask: np.ndarray) -> Dict
     safe_count = max(float(segment_mask.sum()), 1e-6)
     transcript_probabilities = (probabilities * segment_mask[:, None]).sum(axis=0) / safe_count
     transcript_label_average = int(transcript_probabilities.argmax())
-    transcript_label_majority = int(
-        (labels * segment_mask.astype(np.int64)).sum() * 2 > segment_mask.sum()
-    )
     return {
         "probabilities": probabilities,
         "labels": labels,
         "transcript_probabilities": transcript_probabilities,
         "transcript_label_average": transcript_label_average,
-        "transcript_label_majority": transcript_label_majority,
     }
 
 
@@ -689,7 +629,7 @@ def run_backbone(
 
     texts, segment_mask = build_slot_inputs(sample_texts, max_segments=max_segments)
     outputs = session.run(OUTPUT_NAMES, {"text": texts, "segment_mask": segment_mask})
-    logits, probabilities, labels, transcript_probs, average_label, majority_label = outputs
+    logits, probabilities, labels, transcript_probs, average_label = outputs
     reference = numpy_voting_reference(logits, segment_mask)
 
     smoke_valid = bool(
@@ -698,12 +638,10 @@ def run_backbone(
         and labels.shape == (max_segments,)
         and transcript_probs.shape == (2,)
         and average_label.shape == (1,)
-        and majority_label.shape == (1,)
         and np.allclose(probabilities, reference["probabilities"], atol=1e-6)
         and np.array_equal(labels, reference["labels"])
         and np.allclose(transcript_probs, reference["transcript_probabilities"], atol=1e-6)
         and int(average_label[0]) == reference["transcript_label_average"]
-        and int(majority_label[0]) == reference["transcript_label_majority"]
     )
 
     io_metadata = infer_metadata(session)
@@ -742,7 +680,6 @@ def run_backbone(
             "label_shape": list(labels.shape),
             "transcript_probabilities_shape": list(transcript_probs.shape),
             "transcript_label_average": int(average_label[0]),
-            "transcript_label_majority": int(majority_label[0]),
             "metadata_path": str(metadata_path),
             "config_path": str(config_path),
             "inputs": io_metadata["inputs"],

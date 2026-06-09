@@ -123,10 +123,10 @@ python scripts/onnx/add_transcript_voting_onnx.py \
 ```
 
 The augmented model keeps `logits` and adds `segment_probabilities`,
-`segment_labels`, `transcript_probabilities`, `transcript_label_average`, and
-`transcript_label_majority`. This applies to classifier-only ONNX models with
-batched segment inputs, not to separate one-segment requests. If serving this
-augmented model with Triton, add the new outputs to the model `config.pbtxt`.
+`segment_labels`, `transcript_probabilities`, and `transcript_label_average`.
+This applies to classifier-only ONNX models with batched segment inputs, not to
+separate one-segment requests. If serving this augmented model with Triton, add
+the new outputs to the model `config.pbtxt`.
 
 ### 5. Direct ONNX conversion tutorial notebook
 
@@ -153,7 +153,7 @@ See `notebooks/03_quickstart_fused_onnx.ipynb` for a CHiRPE pipeline walkthrough
 - raw transcript loading and format check
 - CHiRPE preprocessing (`TranscriptPreprocessor`)
 - fused ONNX inference on segment summaries
-- transcript-level majority/average voting
+- transcript-level average probability voting
 
 ### 8. Fixed-slot fused string ONNX with transcript voting
 
@@ -178,9 +178,8 @@ segment_mask = [1.0, 1.0] + [0.0] * 13
 ```
 
 The generated models output segment-level `logits`, `probabilities`, and
-`label`, plus `transcript_probabilities`, `transcript_label_average`, and
-`transcript_label_majority`. Padded slots are ignored by transcript aggregation
-through `segment_mask`.
+`label`, plus `transcript_probabilities` and `transcript_label_average`. Padded
+slots are ignored by transcript aggregation through `segment_mask`.
 
 > [!IMPORTANT]
 > Raw transcript preprocessing, segmentation, and summarisation still remain in

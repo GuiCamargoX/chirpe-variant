@@ -175,8 +175,11 @@ def build_model_inputs(model, encoded_batch: Dict[str, torch.Tensor]) -> Dict[st
     return filtered
 
 
-def get_vote(predictions: np.ndarray) -> int:
-    return int(np.bincount(predictions).argmax())
+def get_vote(logits: np.ndarray) -> int:
+    """Transcript-level decision via average probability vote over segments."""
+    exp_logits = np.exp(logits - logits.max(axis=-1, keepdims=True))
+    probabilities = exp_logits / exp_logits.sum(axis=-1, keepdims=True)
+    return int(probabilities.mean(axis=0).argmax())
 
 
 def run_backbone(
@@ -258,8 +261,8 @@ def run_backbone(
         segment_total += len(torch_preds)
         segment_match_count += int((torch_preds == triton_preds).sum())
 
-        torch_vote = get_vote(torch_preds)
-        triton_vote = get_vote(triton_preds)
+        torch_vote = get_vote(torch_logits)
+        triton_vote = get_vote(triton_logits)
         transcript_total += 1
         transcript_match_count += int(torch_vote == triton_vote)
 

@@ -183,7 +183,7 @@ def predict_cli():
     """Run inference for raw transcripts, pre-segmented payloads, or plain text.
 
     Input JSON supports three shapes:
-    1. `{"transcript": [...]}` for full preprocessing + segment voting
+    1. `{"transcript": [...]}` for full preprocessing + average probability vote
     2. `{"segments": [...]}` for pre-segmented summaries
     3. `{"text": "..."}` for direct single-text classification
     """
