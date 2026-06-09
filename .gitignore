@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 .vscode
 
+AGENTS.md
+CLAUDE.md
+.claude/
+
 # C extensions
 *.so
 

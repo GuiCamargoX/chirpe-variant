@@ -32,6 +32,7 @@ class TranscriptPreprocessor:
         phi3_download_root: Optional[str] = None,
         phi3_max_new_tokens: int = 64,
         phi3_download: bool = False,
+        phi3_tokenizer_backend: str = "og",
     ):
         """Initialize the preprocessor.
 
@@ -51,6 +52,10 @@ class TranscriptPreprocessor:
                 from / downloaded into.
             phi3_max_new_tokens: Max new tokens per segment for the Phi-3 backend.
             phi3_download: Whether to download the Phi-3 ONNX model if missing.
+            phi3_tokenizer_backend: Tokenizer for the Phi-3 backend: ``"og"``
+                (onnxruntime-genai, default) or ``"hf"`` (transformers
+                AutoTokenizer). Only the tokenizer changes; og.Generator runs the
+                model either way.
         """
         self.segmenter = SymptomSegmenter(threshold=segmentation_threshold)
 
@@ -60,6 +65,7 @@ class TranscriptPreprocessor:
                 download_root=phi3_download_root,
                 max_new_tokens=phi3_max_new_tokens,
                 download=phi3_download,
+                tokenizer_backend=phi3_tokenizer_backend,
             )
         elif use_llm_summarizer and llm_model_name:
             self.summarizer = SegmentSummarizer(
@@ -102,14 +108,16 @@ class TranscriptPreprocessor:
                 continue
 
             summary = self.summarizer.summarize_segment(segment.get_text())
-            segment_data.append({
-                "domain": segment.domain,
-                "text": segment.get_text(),
-                "summary": summary,
-                "start_idx": segment.start_idx,
-                "end_idx": segment.end_idx,
-                "utterance_count": len(segment.utterances),
-            })
+            segment_data.append(
+                {
+                    "domain": segment.domain,
+                    "text": segment.get_text(),
+                    "summary": summary,
+                    "start_idx": segment.start_idx,
+                    "end_idx": segment.end_idx,
+                    "utterance_count": len(segment.utterances),
+                }
+            )
 
         return {
             "participant_id": participant_id,

@@ -63,10 +63,7 @@ class SegmentSummarizer:
                 # Gemma models may need specific attention implementation
                 load_kwargs["attn_implementation"] = "eager"
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                **load_kwargs
-            )
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, **load_kwargs)
 
             # Set padding token if not present (needed for some models like Gemma)
             if self.tokenizer.pad_token is None:
@@ -223,6 +220,7 @@ class Phi3OnnxSummarizer:
         download_root: Optional[str] = None,
         max_new_tokens: int = 64,
         download: bool = False,
+        tokenizer_backend: str = "og",
     ):
         """Initialize the Phi-3 ONNX summarizer.
 
@@ -236,14 +234,36 @@ class Phi3OnnxSummarizer:
             max_new_tokens: Maximum number of new tokens to generate per segment.
             download: Whether to fetch the model from the Hugging Face Hub if it
                 is not already present.
+            tokenizer_backend: Which tokenizer turns the prompt into token IDs.
+                ``"og"`` (default) uses ``onnxruntime_genai.Tokenizer``;
+                ``"hf"`` uses ``transformers.AutoTokenizer`` loaded from the same
+                model directory. The og.Generator runs the model in both cases —
+                only the tokenizer changes. Both read the same ``tokenizer.json``
+                and produce identical IDs on natural-language input (verified by
+                ``scripts/experiments/tokenizer_parity_check.py``); the ``"hf"``
+                backend exists because ``onnxruntime_genai`` has no Triton support,
+                whereas ``AutoTokenizer`` is a standard, deployable dependency.
         """
+        if tokenizer_backend not in ("og", "hf"):
+            raise ValueError(f"tokenizer_backend must be 'og' or 'hf', got {tokenizer_backend!r}")
         self.max_new_tokens = max_new_tokens
+        self.tokenizer_backend = tokenizer_backend
         self._og = self._require_genai()
 
         resolved_dir = self._resolve_model_dir(model_dir, download_root, download)
-        logger.info(f"Loading Phi-3 ONNX summarizer from {resolved_dir}")
+        logger.info(
+            f"Loading Phi-3 ONNX summarizer from {resolved_dir} "
+            f"(tokenizer_backend={tokenizer_backend})"
+        )
         self.model = self._og.Model(str(resolved_dir))
-        self.tokenizer = self._og.Tokenizer(self.model)
+        # The og.Generator always runs the model; only the tokenizer differs.
+        self.og_tokenizer = self._og.Tokenizer(self.model)
+        if tokenizer_backend == "hf":
+            from transformers import AutoTokenizer
+
+            self.hf_tokenizer = AutoTokenizer.from_pretrained(str(resolved_dir))
+        else:
+            self.hf_tokenizer = None
         logger.info("Phi-3 ONNX summarizer loaded successfully")
 
     @staticmethod
@@ -329,26 +349,56 @@ class Phi3OnnxSummarizer:
         """
         og = self._og
         prompt = self._build_prompt(segment_text)
-        input_tokens = self.tokenizer.encode(prompt)
+        # Only the tokenizer differs between backends; the og.Generator below
+        # runs the model identically on whatever token IDs it is fed.
+        if self.tokenizer_backend == "hf":
+            input_tokens = self.hf_tokenizer.encode(prompt)
+        else:
+            input_tokens = self.og_tokenizer.encode(prompt)
 
         params = og.GeneratorParams(self.model)
+        # Decoding is greedy and deterministic: do_sample=False (with num_beams=1)
+        # means we always take the argmax token. Every generation parameter is set
+        # explicitly here (rather than relying on genai_config defaults) so the
+        # behaviour is self-documenting and cannot silently change if a config or
+        # library default shifts. The sampling knobs (temperature, top_k, top_p)
+        # are inert under greedy decoding, and the repetition controls are
+        # disabled (repetition_penalty=1.0, no_repeat_ngram_size=0). max_new_tokens
+        # is the only generation-length control, applied here via max_length.
         params.set_search_options(
             max_length=len(input_tokens) + self.max_new_tokens,
             batch_size=1,
+            do_sample=False,
+            num_beams=1,
+            temperature=1.0,
+            top_k=1,
+            top_p=1.0,
+            repetition_penalty=1.0,
+            no_repeat_ngram_size=0,
         )
         generator = og.Generator(self.model, params)
         generator.append_tokens(input_tokens)
 
-        # Fresh decode stream per segment so detokenization state never leaks
-        # between segments.
-        stream = self.tokenizer.create_stream()
-        generated = []
-        while not generator.is_done():
-            generator.generate_next_token()
-            next_token = int(generator.get_next_tokens()[0])
-            generated.append(stream.decode(next_token))
+        if self.tokenizer_backend == "hf":
+            # Collect the generated IDs and batch-decode with HF. Keep special
+            # tokens so _clean_output can still trim at markers like <|end|>.
+            generated_ids = []
+            while not generator.is_done():
+                generator.generate_next_token()
+                generated_ids.append(int(generator.get_next_tokens()[0]))
+            text = self.hf_tokenizer.decode(generated_ids, skip_special_tokens=False)
+        else:
+            # Fresh decode stream per segment so detokenization state never leaks
+            # between segments.
+            stream = self.og_tokenizer.create_stream()
+            generated = []
+            while not generator.is_done():
+                generator.generate_next_token()
+                next_token = int(generator.get_next_tokens()[0])
+                generated.append(stream.decode(next_token))
+            text = "".join(generated)
 
-        return self._clean_output("".join(generated))
+        return self._clean_output(text)
 
     def summarize_segments(self, segments: List["Segment"]) -> List[str]:
         """Summarize multiple segments.

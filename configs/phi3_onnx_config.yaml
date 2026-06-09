@@ -33,3 +33,12 @@ llm:
   phi3_download_root: "outputs/local_onnx_llm/phi3-mini-4k-instruct-onnx"
   phi3_max_new_tokens: 64
   phi3_download: true
+  # Tokenizer for the Phi-3 backend: "og" (onnxruntime-genai, default) or "hf"
+  # (transformers AutoTokenizer). og.Generator runs the model either way; only
+  # the tokenizer changes. They produce identical token IDs on clinical text
+  # (see scripts/experiments/tokenizer_parity_check.py). "hf" is the deployable
+  # option, since onnxruntime-genai has no Triton support.
+  phi3_tokenizer_backend: "og"
+  # Decoding is greedy and deterministic (do_sample=False, num_beams=1); the
+  # sampling/repetition parameters are pinned in Phi3OnnxSummarizer and not
+  # configurable here, so summaries are reproducible.

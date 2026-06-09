@@ -13,10 +13,15 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    Trainer,
+    TrainingArguments,
+)
 
-from chirpe.data.preprocessor import TranscriptPreprocessor
 from chirpe.data.dataset import load_data
+from chirpe.data.preprocessor import TranscriptPreprocessor
 from chirpe.utils.config import load_config
 
 logging.basicConfig(level=logging.INFO)
@@ -77,9 +82,9 @@ def main():
 
     args = parser.parse_args()
 
-    print("="*70)
+    print("=" * 70)
     print("CHiRPE Training from Config")
-    print("="*70)
+    print("=" * 70)
 
     # Load config
     config = load_config(args.config)
@@ -108,9 +113,9 @@ def main():
     print(f"Using {len(train_data)} train, {len(val_data)} val, {len(test_data)} test")
 
     # Preprocess
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Preprocessing...")
-    print("="*70)
+    print("=" * 70)
 
     # Select summarization backend
     llm_config = config.get("llm", {})
@@ -130,10 +135,12 @@ def main():
             phi3_download_root=llm_config.get("phi3_download_root"),
             phi3_max_new_tokens=llm_config.get("phi3_max_new_tokens", 64),
             phi3_download=llm_config.get("phi3_download", False),
+            phi3_tokenizer_backend=llm_config.get("phi3_tokenizer_backend", "og"),
         )
     elif use_gemma:
         print("Using Gemma for LLM summarization")
-        from transformers import AutoModelForCausalLM, AutoTokenizer as LLMTokenizer
+        from transformers import AutoModelForCausalLM
+        from transformers import AutoTokenizer as LLMTokenizer
 
         llm_model_name = llm_config["model_name"]
         print(f"Loading {llm_model_name}...")
@@ -163,6 +170,7 @@ def main():
 
     # Process data
     from chirpe.data.segmentation import SymptomSegmenter
+
     segmenter = SymptomSegmenter(threshold=config["preprocessing"]["segmentation_threshold"])
 
     max_segments = config["preprocessing"].get("max_segments_per_transcript", 3)
@@ -196,25 +204,31 @@ Summarize this clinical interview segment in one sentence:
 <end_of_turn>
 <start_of_turn>model
 """
-                    inputs = llm_tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
+                    inputs = llm_tokenizer(
+                        prompt, return_tensors="pt", truncation=True, max_length=512
+                    )
                     inputs = {k: v.to(llm_model.device) for k, v in inputs.items()}
 
                     with torch.no_grad():
                         outputs = llm_model.generate(**inputs, max_new_tokens=100, do_sample=False)
 
                     input_len = inputs["input_ids"].shape[1]
-                    summary = llm_tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip()
+                    summary = llm_tokenizer.decode(
+                        outputs[0][input_len:], skip_special_tokens=True
+                    ).strip()
                 else:
                     # Simple fallback
                     summary = text.replace("I ", "The patient ").replace("my ", "their ")[:150]
 
                 print(f"  {summary[:60]}...")
 
-                processed.append({
-                    "participant_id": item["participant_id"],
-                    "summary": summary,
-                    "label": 1 if item["label"] == "CHR-P" else 0,
-                })
+                processed.append(
+                    {
+                        "participant_id": item["participant_id"],
+                        "summary": summary,
+                        "label": 1 if item["label"] == "CHR-P" else 0,
+                    }
+                )
 
         return processed
 
@@ -225,9 +239,9 @@ Summarize this clinical interview segment in one sentence:
     print(f"\n✓ Preprocessed: {len(train_processed)} train, {len(val_processed)} val")
 
     # Train classifier
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Training classifier...")
-    print("="*70)
+    print("=" * 70)
 
     model_name = config["model"]["name"]
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -302,9 +316,9 @@ Summarize this clinical interview segment in one sentence:
     with open(final_model_dir / "config_used.json", "w") as f:
         json.dump(config, f, indent=2)
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✓ TRAINING COMPLETE")
-    print("="*70)
+    print("=" * 70)
     print(f"\nModel saved to: {final_model_dir}")
     print(f"\nTo load:")
     print(f"  from chirpe.models.classifier import CHRClassifier")

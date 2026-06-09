@@ -14,8 +14,8 @@ import logging
 import sys
 from pathlib import Path
 
-from chirpe.data.dataset import load_data, split_data
 from chirpe.data.dataset import CHRPDataset as Dataset
+from chirpe.data.dataset import load_data, split_data
 from chirpe.models.classifier import CHRClassifier
 from chirpe.models.trainer import ModelTrainer
 from chirpe.utils.config import load_config
@@ -114,11 +114,13 @@ def train_cli():
             result = preprocessor.process_transcript(item["transcript"], item["participant_id"])
             # Flatten to segment-level
             for seg in result.get("segments", [])[:max_segments]:
-                processed.append({
-                    "participant_id": item["participant_id"],
-                    "summary": seg["summary"],
-                    "label": item["label"],
-                })
+                processed.append(
+                    {
+                        "participant_id": item["participant_id"],
+                        "summary": seg["summary"],
+                        "label": item["label"],
+                    }
+                )
         return processed
 
     max_segments = config.get("preprocessing", {}).get("max_segments_per_transcript", 3)
@@ -168,6 +170,7 @@ def train_cli():
 
     # Save config for later prediction (inside best_model dir)
     import json
+
     config_save_path = args.output_dir / "best_model" / "chirpe_config.json"
     with open(config_save_path, "w") as f:
         json.dump(config, f, indent=2)
@@ -275,6 +278,7 @@ def predict_cli():
             phi3_download_root=llm_config.get("phi3_download_root"),
             phi3_max_new_tokens=llm_config.get("phi3_max_new_tokens", 64),
             phi3_download=llm_config.get("phi3_download", False),
+            phi3_tokenizer_backend=llm_config.get("phi3_tokenizer_backend", "og"),
         )
         logger.info(
             f"Using segmentation_threshold={seg_threshold}, use_llm_summarizer={use_llm}, "
@@ -282,8 +286,7 @@ def predict_cli():
         )
 
         result = preprocessor.process_transcript(
-            input_data["transcript"],
-            input_data.get("participant_id", "unknown")
+            input_data["transcript"], input_data.get("participant_id", "unknown")
         )
         segments = result.get("segments", [])
         logger.info(f"Extracted {len(segments)} segments from transcript")
@@ -296,9 +299,7 @@ def predict_cli():
         results = classifier.predict_with_segments(segments)
         results["participant_id"] = input_data.get("participant_id", "unknown")
         results["num_segments"] = len(segments)
-        results["segments"] = [
-            {"domain": s["domain"], "summary": s["summary"]} for s in segments
-        ]
+        results["segments"] = [{"domain": s["domain"], "summary": s["summary"]} for s in segments]
 
         # Store segments for explanations
         input_data["segments"] = segments
@@ -413,11 +414,13 @@ def evaluate_cli():
         result = preprocessor.process_transcript(item["transcript"], item["participant_id"])
         # Flatten to segment-level
         for seg in result.get("segments", [])[:3]:
-            processed.append({
-                "participant_id": item["participant_id"],
-                "summary": seg["summary"],
-                "label": item["label"],
-            })
+            processed.append(
+                {
+                    "participant_id": item["participant_id"],
+                    "summary": seg["summary"],
+                    "label": item["label"],
+                }
+            )
 
     logger.info(f"Preprocessed: {len(processed)} test segments")
 
