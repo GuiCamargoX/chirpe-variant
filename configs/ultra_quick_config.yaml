@@ -24,7 +24,7 @@ data:
   train_file: "train.json"
   val_file: "val.json"
   test_file: "test.json"
-  text_column: "summary"
+  text_column: "input_text"  # raw segment text + summary (robust to bad summaries)
   label_column: "label"
   stratify_by: "label"
   train_split: 0.64

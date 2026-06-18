@@ -118,6 +118,7 @@ def train_cli():
                     {
                         "participant_id": item["participant_id"],
                         "summary": seg["summary"],
+                        "input_text": seg["input_text"],
                         "label": item["label"],
                     }
                 )

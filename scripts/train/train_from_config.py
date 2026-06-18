@@ -21,7 +21,7 @@ from transformers import (
 )
 
 from chirpe.data.dataset import load_data
-from chirpe.data.preprocessor import TranscriptPreprocessor
+from chirpe.data.preprocessor import TranscriptPreprocessor, build_classifier_input
 from chirpe.utils.config import load_config
 
 logging.basicConfig(level=logging.INFO)
@@ -226,6 +226,7 @@ Summarize this clinical interview segment in one sentence:
                     {
                         "participant_id": item["participant_id"],
                         "summary": summary,
+                        "input_text": build_classifier_input(text, summary),
                         "label": 1 if item["label"] == "CHR-P" else 0,
                     }
                 )

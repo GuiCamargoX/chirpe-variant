@@ -15,6 +15,24 @@ from chirpe.data.summarizer import (
 logger = logging.getLogger(__name__)
 
 
+def build_classifier_input(segment_text: str, summary: str) -> str:
+    """Build the classifier input text from a segment and its summary.
+
+    The classifier is fed the raw segment text followed by its summary
+    (``"<segment text> <summary>"``). Including the raw segment makes the
+    classifier robust to a poor or hallucinated summary: the original wording is
+    always present, so a bad summary degrades rather than dominates the input.
+
+    Either part may be empty; empty parts are dropped and whitespace is
+    collapsed at the join.
+    """
+    segment_text = (segment_text or "").strip()
+    summary = (summary or "").strip()
+    if segment_text and summary:
+        return f"{segment_text} {summary}"
+    return segment_text or summary
+
+
 class TranscriptPreprocessor:
     """Pipeline that segments transcripts and summarizes each mapped segment.
 
@@ -113,6 +131,7 @@ class TranscriptPreprocessor:
                     "domain": segment.domain,
                     "text": segment.get_text(),
                     "summary": summary,
+                    "input_text": build_classifier_input(segment.get_text(), summary),
                     "start_idx": segment.start_idx,
                     "end_idx": segment.end_idx,
                     "utterance_count": len(segment.utterances),

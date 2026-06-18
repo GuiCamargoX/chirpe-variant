@@ -123,17 +123,26 @@ class CHRClassifier:
     def predict_with_segments(self, segments: List[Dict]) -> Dict:
         """Predict from multiple segments via average probability vote.
 
-        The transcript-level label is the argmax over the mean of the
-        per-segment class probabilities.
+        Each segment's classifier input is its raw segment text followed by its
+        summary (see ``build_classifier_input``), so a poor summary degrades
+        rather than dominates the input. The transcript-level label is the argmax
+        over the mean of the per-segment class probabilities.
 
         Args:
-            segments: List of segment dictionaries with `summary` keys.
+            segments: List of segment dictionaries. Uses ``input_text`` when
+                present, otherwise builds it from ``text`` + ``summary``.
 
         Returns:
             Dictionary containing transcript prediction and per-segment outputs.
         """
-        summaries = [seg["summary"] for seg in segments]
-        predictions, probs = self.predict(summaries, return_probs=True)
+        from chirpe.data.preprocessor import build_classifier_input
+
+        inputs = [
+            seg.get("input_text")
+            or build_classifier_input(seg.get("text", ""), seg.get("summary", ""))
+            for seg in segments
+        ]
+        predictions, probs = self.predict(inputs, return_probs=True)
 
         avg_probs = np.mean(probs, axis=0)
         final_pred = int(np.argmax(avg_probs))
