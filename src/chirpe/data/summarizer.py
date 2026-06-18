@@ -193,6 +193,137 @@ class SimpleSummarizer:
         return [self.summarize_segment(s.get_text()) for s in segments]
 
 
+# Instruction used to steer the SmolLM2 summarizer toward short, clinically
+# focused, third-person summaries suitable as classifier input. Mirrors
+# ``PHI3_INSTRUCTION`` so the two lightweight summarizers are interchangeable.
+SMOLLM2_INSTRUCTION = (
+    "Summarize the following clinical interview segment in exactly 2 concise, "
+    "third-person sentences. Focus on symptoms, functional impact, and "
+    "risk-relevant details. Return only the summary text and do not repeat yourself."
+)
+
+
+class SmolLM2Summarizer:
+    """Lightweight summarizer backed by a SmolLM2 instruct model via transformers.
+
+    SmolLM2 is a small (135M / 360M / 1.7B) instruction-tuned causal LM. The
+    360M default keeps it a genuinely *light* alternative to the 7B
+    ``SegmentSummarizer`` and the Phi-3 ONNX summarizer, while still running the
+    same single-paragraph, third-person summarization contract used elsewhere in
+    the pipeline.
+
+    Decoding is greedy and deterministic (``do_sample=False``) so repeated runs
+    over the same segment produce identical summaries.
+    """
+
+    DEFAULT_MODEL_NAME = "HuggingFaceTB/SmolLM2-360M-Instruct"
+
+    def __init__(
+        self,
+        model_name: str = DEFAULT_MODEL_NAME,
+        device: str = "auto",
+        max_new_tokens: int = 64,
+    ):
+        """Initialize the SmolLM2 summarizer.
+
+        Args:
+            model_name: HuggingFace model id of a SmolLM2 instruct checkpoint.
+            device: Device map passed to ``from_pretrained`` (e.g. ``"auto"``,
+                ``"cpu"``, ``"cuda"``).
+            max_new_tokens: Maximum number of new tokens generated per segment.
+        """
+        self.model_name = model_name
+        self.device = device
+        self.max_new_tokens = max_new_tokens
+        self.model = None
+        self.tokenizer = None
+
+        self._load_model()
+
+    def _load_model(self):
+        """Load the SmolLM2 tokenizer and causal LM."""
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+
+            logger.info(f"Loading SmolLM2 summarizer {self.model_name}")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                torch_dtype="auto",
+                device_map=self.device,
+            )
+
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                self.model.config.pad_token_id = self.model.config.eos_token_id
+
+            logger.info("SmolLM2 summarizer loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load SmolLM2 model: {e}")
+            raise
+
+    @staticmethod
+    def _build_messages(segment_text: str) -> List[dict]:
+        """Build the chat-format messages for one segment."""
+        return [
+            {"role": "system", "content": SMOLLM2_INSTRUCTION},
+            {"role": "user", "content": f"Segment:\n{segment_text}"},
+        ]
+
+    @staticmethod
+    def _clean_output(text: str) -> str:
+        """Strip whitespace and any leaked chat-template markers from generation."""
+        for marker in ("<|im_end|>", "<|endoftext|>", "<|im_start|>"):
+            idx = text.find(marker)
+            if idx != -1:
+                text = text[:idx]
+        return text.strip()
+
+    def summarize_segment(self, segment_text: str) -> str:
+        """Summarize a single segment with SmolLM2.
+
+        Args:
+            segment_text: The text to summarize
+
+        Returns:
+            Short third-person clinical summary.
+        """
+        messages = self._build_messages(segment_text)
+        # return_dict=True yields an explicit attention_mask; without it,
+        # generate() warns and may misbehave because pad_token == eos_token.
+        inputs = self.tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            return_tensors="pt",
+            return_dict=True,
+        ).to(self.model.device)
+        input_ids = inputs["input_ids"]
+
+        output_ids = self.model.generate(
+            input_ids,
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=self.max_new_tokens,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=self.tokenizer.pad_token_id,
+        )
+        # Decode only the newly generated tokens (exclude the prompt).
+        generated = output_ids[0][input_ids.shape[-1] :]
+        text = self.tokenizer.decode(generated, skip_special_tokens=False)
+        return self._clean_output(text)
+
+    def summarize_segments(self, segments: List["Segment"]) -> List[str]:
+        """Summarize multiple segments.
+
+        Args:
+            segments: List of Segment objects
+
+        Returns:
+            List of summaries
+        """
+        return [self.summarize_segment(s.get_text()) for s in segments]
+
+
 # Instruction used to steer the Phi-3 ONNX summarizer toward short, clinically
 # focused, third-person summaries suitable as classifier input.
 PHI3_INSTRUCTION = (
