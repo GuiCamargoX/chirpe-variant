@@ -44,6 +44,15 @@ IMPORTANT: When invoking commands via conda, always use `conda run --no-capture-
 - Reports intended for version control should store repo-relative paths or placeholders, not resolved absolute paths.
 - Keep `data/` and `outputs/` as local artifacts; do not rely on their contents being available in the public repo.
 
+## Change Tracking
+- When modifying any part of the repo, document behavior or workflow changes in the most relevant place when needed: notebook changelogs, README, reports, config docs, scripts, or `AGENTS.md`.
+- When modifying any `.ipynb` notebook, add or update a top-level Markdown changelog cell near the start of the notebook.
+- Changelog entries should be newest first and use one-line entries: `YYYY-MM-DD: what changed; why`.
+- Document all logic changes, including model swaps, inference behavior, preprocessing/summarization changes, config/default changes, path/output changes, dependency assumptions, or cells added/removed.
+- If code, config, or scripts change notebook behavior, update the affected notebook changelog when that notebook is part of the task.
+- If a notebook change is intentionally non-behavioral, note that briefly when useful.
+- For `notebooks/05_readyai_onnx_summarization_inference.ipynb` and `notebooks/06_readyai_smollm2_summarization_inference.ipynb`, keep this changelog especially current because `.ipynb` diffs are hard to review.
+
 ## Architecture
 - `src/chirpe/data/`: JSON loading, PSYCHS-domain segmentation, summarization, preprocessing.
 - `src/chirpe/models/`: `CHRClassifier` and the Hugging Face `Trainer` wrapper in `ModelTrainer`.

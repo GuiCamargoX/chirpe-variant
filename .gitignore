@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 .vscode
 
+.opencode/
+
 AGENTS.md
 CLAUDE.md
 .claude/
